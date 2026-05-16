@@ -1,6 +1,6 @@
 `timescale 1ns / 100ps
 
-module yd_q_h(clk, rst, enable, data_in,
+module y_dqh(clk, rst, enable, data_in,
 JPEG_bitstream, 
   data_ready, y_orc, end_of_block_output,
    end_of_block_empty);
@@ -16,32 +16,32 @@ output	end_of_block_empty;
 
 
 wire	dct_enable, quantizer_enable;
-wire [10:0] Z11_final, Z12_final, Z13_final, Z14_final;
-wire [10:0] Z15_final, Z16_final, Z17_final, Z18_final;
-wire [10:0] Z21_final, Z22_final, Z23_final, Z24_final;
-wire [10:0] Z25_final, Z26_final, Z27_final, Z28_final;
-wire [10:0] Z31_final, Z32_final, Z33_final, Z34_final;
-wire [10:0] Z35_final, Z36_final, Z37_final, Z38_final;
-wire [10:0] Z41_final, Z42_final, Z43_final, Z44_final;
-wire [10:0] Z45_final, Z46_final, Z47_final, Z48_final;
-wire [10:0] Z51_final, Z52_final, Z53_final, Z54_final;
-wire [10:0] Z55_final, Z56_final, Z57_final, Z58_final;
-wire [10:0] Z61_final, Z62_final, Z63_final, Z64_final;
-wire [10:0] Z65_final, Z66_final, Z67_final, Z68_final;
-wire [10:0] Z71_final, Z72_final, Z73_final, Z74_final;
-wire [10:0] Z75_final, Z76_final, Z77_final, Z78_final;
-wire [10:0] Z81_final, Z82_final, Z83_final, Z84_final;
-wire [10:0] Z85_final, Z86_final, Z87_final, Z88_final;
-wire [10:0] Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18; 	
-wire [10:0] Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28; 
-wire [10:0] Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q38; 
-wire [10:0] Q41, Q42, Q43, Q44, Q45, Q46, Q47, Q48; 
-wire [10:0] Q51, Q52, Q53, Q54, Q55, Q56, Q57, Q58; 
-wire [10:0] Q61, Q62, Q63, Q64, Q65, Q66, Q67, Q68; 
-wire [10:0] Q71, Q72, Q73, Q74, Q75, Q76, Q77, Q78; 
-wire [10:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88; 
+wire [11:0] Z11_final, Z12_final, Z13_final, Z14_final;
+wire [11:0] Z15_final, Z16_final, Z17_final, Z18_final;
+wire [11:0] Z21_final, Z22_final, Z23_final, Z24_final;
+wire [11:0] Z25_final, Z26_final, Z27_final, Z28_final;
+wire [11:0] Z31_final, Z32_final, Z33_final, Z34_final;
+wire [11:0] Z35_final, Z36_final, Z37_final, Z38_final;
+wire [11:0] Z41_final, Z42_final, Z43_final, Z44_final;
+wire [11:0] Z45_final, Z46_final, Z47_final, Z48_final;
+wire [11:0] Z51_final, Z52_final, Z53_final, Z54_final;
+wire [11:0] Z55_final, Z56_final, Z57_final, Z58_final;
+wire [11:0] Z61_final, Z62_final, Z63_final, Z64_final;
+wire [11:0] Z65_final, Z66_final, Z67_final, Z68_final;
+wire [11:0] Z71_final, Z72_final, Z73_final, Z74_final;
+wire [11:0] Z75_final, Z76_final, Z77_final, Z78_final;
+wire [11:0] Z81_final, Z82_final, Z83_final, Z84_final;
+wire [11:0] Z85_final, Z86_final, Z87_final, Z88_final;
+wire [11:0] Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18; 	
+wire [11:0] Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28; 
+wire [11:0] Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q38; 
+wire [11:0] Q41, Q42, Q43, Q44, Q45, Q46, Q47, Q48; 
+wire [11:0] Q51, Q52, Q53, Q54, Q55, Q56, Q57, Q58; 
+wire [11:0] Q61, Q62, Q63, Q64, Q65, Q66, Q67, Q68; 
+wire [11:0] Q71, Q72, Q73, Q74, Q75, Q76, Q77, Q78; 
+wire [11:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88; 
 
-	dct_2d_1channel u1(
+	dct_2d_1channel dct_2d_y_inst(
 	.clk(clk),.rst(rst), .enable(enable), .data_in(data_in), 
 	.Z11_final(Z11_final), .Z12_final(Z12_final), 
 	.Z13_final(Z13_final), .Z14_final(Z14_final), .Z15_final(Z15_final), .Z16_final(Z16_final), 
@@ -61,7 +61,7 @@ wire [10:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88;
 	.Z83_final(Z83_final), .Z84_final(Z84_final), .Z85_final(Z85_final), .Z86_final(Z86_final), 
 	.Z87_final(Z87_final), .Z88_final(Z88_final), .output_enable(dct_enable)); 
 	
-	y_quantizer u2(
+	y_quantizer y_quantizer_inst(
 	.clk(clk),.rst(rst),.enable(dct_enable),
 	.Z11(Z11_final), .Z12(Z12_final), .Z13(Z13_final), .Z14(Z14_final), 
 	.Z15(Z15_final), .Z16(Z16_final), .Z17(Z17_final), .Z18(Z18_final), 
@@ -100,6 +100,6 @@ wire [10:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88;
 	.Y81(Q18), .Y82(Q28), .Y83(Q38), .Y84(Q48), .Y85(Q58), .Y86(Q68), .Y87(Q78), .Y88(Q88),
 	.JPEG_bitstream(JPEG_bitstream), .data_ready(data_ready), .output_reg_count(y_orc),
 	.end_of_block_output(end_of_block_output),
-	 .end_of_block_empty(end_of_block_empty));	
+	.end_of_block_empty(end_of_block_empty));	
 
 	endmodule

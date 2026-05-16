@@ -1,106 +1,134 @@
-module compute_1d_dct(
+module compute_1d_dct #(
+    parameter IN_WIDTH = 8 // Hỗ trợ 8-bit cho Hàng, 12-bit cho Cột
+)(
     input rst,
     input clk,
-    input [7:0] data_in,
-    input [2:0] row, // Thực chất đây là chỉ số mẫu thời gian (n)
+    input enable,
+    input [IN_WIDTH-1:0] data_in,
+    input [2:0] index,
     output reg out_enable,
-    output reg signed [11:0] dct_out0, dct_out1, dct_out2, dct_out3, dct_out4, dct_out5, dct_out6, dct_out7
+    output reg [11:0] dct_out_0, dct_out_1, 
+    output reg [11:0] dct_out_2, dct_out_3,
+    output reg [11:0] dct_out_4, dct_out_5,
+    output reg [11:0] dct_out_6, dct_out_7
 );
 
-reg signed [15:0] cos_value [0:7];
-reg signed [26:0] dct_temp_sum [0:7];
-reg delay;
+    reg signed [15:0] cos_value [0:7];
+    reg signed [26:0] dct_temp_sum [0:7];
+    reg delay;
 
-// Các hệ số (Đã scale với 2^14 = 16384)
-localparam signed [15:0] cos0  = 5793;  // .3536
-localparam signed [15:0] cos10 = 8035;  // .4904
-localparam signed [15:0] cos11 = 6811;  // .4157
-localparam signed [15:0] cos12 = 4551;  // .2778
-localparam signed [15:0] cos13 = 1598;  // .0975
-localparam signed [15:0] cos14 = -1598; // -.0975
-localparam signed [15:0] cos15 = -4551; // -.2778
-localparam signed [15:0] cos16 = -6811; // -.4157
-localparam signed [15:0] cos17 = -8035; // -.4904
-localparam signed [15:0] cos20 = 7568;  // .4619
-localparam signed [15:0] cos21 = 3135;  // .1913
-localparam signed [15:0] cos22 = -3135; // -.1913
-localparam signed [15:0] cos23 = -7568; // -.4619
-localparam signed [15:0] cos41 = -5793; // -.3536
+    // Các hệ số (Đã scale với 2^14 = 16384)
+    localparam signed [15:0] cos0  = 5793;  // .3536
+    localparam signed [15:0] cos10 = 8035;  // .4904
+    localparam signed [15:0] cos11 = 6811;  // .4157
+    localparam signed [15:0] cos12 = 4551;  // .2778
+    localparam signed [15:0] cos13 = 1598;  // .0975
+    localparam signed [15:0] cos14 = -1598; // -.0975
+    localparam signed [15:0] cos15 = -4551; // -.2778
+    localparam signed [15:0] cos16 = -6811; // -.4157
+    localparam signed [15:0] cos17 = -8035; // -.4904
+    localparam signed [15:0] cos20 = 7568;  // .4619
+    localparam signed [15:0] cos21 = 3135;  // .1913
+    localparam signed [15:0] cos22 = -3135; // -.1913
+    localparam signed [15:0] cos23 = -7568; // -.4619
+    localparam signed [15:0] cos41 = -5793; // -.3536
 
-// 1. SỬA LỖI MA TRẬN: Chuyển vị thành các CỘT thay vì HÀNG
-always @(*) begin
-    case (row)
-        3'b000: begin // Cột 0 (Mẫu x0)
-            cos_value[0] = cos0;  cos_value[1] = cos10; cos_value[2] = cos20; cos_value[3] = cos11;
-            cos_value[4] = cos0;  cos_value[5] = cos12; cos_value[6] = cos21; cos_value[7] = cos13;
-        end
-        3'b001: begin // Cột 1 (Mẫu x1)
-            cos_value[0] = cos0;  cos_value[1] = cos11; cos_value[2] = cos21; cos_value[3] = cos14;
-            cos_value[4] = cos41; cos_value[5] = cos17; cos_value[6] = cos23; cos_value[7] = cos15;
-        end
-        3'b010: begin // Cột 2 (Mẫu x2)
-            cos_value[0] = cos0;  cos_value[1] = cos12; cos_value[2] = cos22; cos_value[3] = cos17;
-            cos_value[4] = cos41; cos_value[5] = cos15; cos_value[6] = cos20; cos_value[7] = cos11;
-        end
-        3'b011: begin // Cột 3 (Mẫu x3)
-            cos_value[0] = cos0;  cos_value[1] = cos13; cos_value[2] = cos23; cos_value[3] = cos15;
-            cos_value[4] = cos0;  cos_value[5] = cos11; cos_value[6] = cos22; cos_value[7] = cos17;
-        end
-        3'b100: begin // Cột 4 (Mẫu x4)
-            cos_value[0] = cos0;  cos_value[1] = cos14; cos_value[2] = cos23; cos_value[3] = cos15;
-            cos_value[4] = cos0;  cos_value[5] = cos11; cos_value[6] = cos22; cos_value[7] = cos17;
-        end
-        3'b101: begin // Cột 5 (Mẫu x5)
-            cos_value[0] = cos0;  cos_value[1] = cos15; cos_value[2] = cos22; cos_value[3] = cos17;
-            cos_value[4] = cos41; cos_value[5] = cos15; cos_value[6] = cos20; cos_value[7] = cos11;
-        end
-        3'b110: begin // Cột 6 (Mẫu x6)
-            cos_value[0] = cos0;  cos_value[1] = cos16; cos_value[2] = cos21; cos_value[3] = cos14;
-            cos_value[4] = cos41; cos_value[5] = cos17; cos_value[6] = cos23; cos_value[7] = cos15;
-        end
-        3'b111: begin // Cột 7 (Mẫu x7)
-            cos_value[0] = cos0;  cos_value[1] = cos17; cos_value[2] = cos20; cos_value[3] = cos11;
-            cos_value[4] = cos0;  cos_value[5] = cos12; cos_value[6] = cos21; cos_value[7] = cos13;
-        end
-        default: begin
-            cos_value[0] = 0; cos_value[1] = 0; cos_value[2] = 0; cos_value[3] = 0; 
-            cos_value[4] = 0; cos_value[5] = 0; cos_value[6] = 0; cos_value[7] = 0; 
-        end
-    endcase
-end
+    // ==========================================
+    // XỬ LÝ DẤU SỐ HỌC THÔNG MINH (CRITICAL FIX)
+    // Nếu 8-bit (Phase 1): Ép thành số dương (Pixel 0-255)
+    // Nếu 12-bit (Phase 2): Giữ nguyên dấu (Hệ số DCT có thể âm)
+    // ==========================================
+    wire signed [15:0] s_data_in;
+    assign s_data_in = $signed(data_in);
 
-// 2. Logic nhân cộng (Giữ nguyên cơ chế tự ghi đè nhịp đầu để không bị lỗi X)
-integer i;
-always @(posedge clk) begin
-    if (row == 3'b000) begin
-        // Nhịp đầu: Ghi đè để bỏ qua trạng thái X
-        for (i=0; i<8; i=i+1) 
-            dct_temp_sum[i] <= $signed({1'b0, data_in}) * cos_value[i];
-    end else begin
-        // Nhịp sau: Cộng dồn
-        for (i=0; i<8; i=i+1) 
-            dct_temp_sum[i] <= dct_temp_sum[i] + ($signed({1'b0, data_in}) * cos_value[i]);
+    // Bảng LUT hệ số Cosine (Giữ nguyên logic của bạn)
+    always @(*) begin
+        case (index)
+            3'b000: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos10; cos_value[2] = cos20; cos_value[3] = cos11;
+                cos_value[4] = cos0;  cos_value[5] = cos12; cos_value[6] = cos21; cos_value[7] = cos13;
+            end
+            3'b001: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos11; cos_value[2] = cos21; cos_value[3] = cos14;
+                cos_value[4] = cos41; cos_value[5] = cos17; cos_value[6] = cos23; cos_value[7] = cos15;
+            end
+            3'b010: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos12; cos_value[2] = cos22; cos_value[3] = cos17;
+                cos_value[4] = cos41; cos_value[5] = cos13; cos_value[6] = cos20; cos_value[7] = cos11;
+            end
+            3'b011: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos13; cos_value[2] = cos23; cos_value[3] = cos15;
+                cos_value[4] = cos0;  cos_value[5] = cos11; cos_value[6] = cos22; cos_value[7] = cos17;
+            end
+            3'b100: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos14; cos_value[2] = cos23; cos_value[3] = cos12;
+                cos_value[4] = cos0;  cos_value[5] = cos16; cos_value[6] = cos22; cos_value[7] = cos10;
+            end
+            3'b101: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos15; cos_value[2] = cos22; cos_value[3] = cos10;
+                cos_value[4] = cos41; cos_value[5] = cos14; cos_value[6] = cos20; cos_value[7] = cos16;
+            end
+            3'b110: begin
+                cos_value[0] = cos0;  cos_value[1] = cos16; cos_value[2] = cos21; cos_value[3] = cos13;
+                cos_value[4] = cos41; cos_value[5] = cos10; cos_value[6] = cos23; cos_value[7] = cos12;
+            end
+            3'b111: begin 
+                cos_value[0] = cos0;  cos_value[1] = cos17; cos_value[2] = cos20; cos_value[3] = cos16;
+                cos_value[4] = cos0;  cos_value[5] = cos15; cos_value[6] = cos21; cos_value[7] = cos14;
+            end
+            default: begin
+                cos_value[0] = 0; cos_value[1] = 0; cos_value[2] = 0; cos_value[3] = 0; 
+                cos_value[4] = 0; cos_value[5] = 0; cos_value[6] = 0; cos_value[7] = 0; 
+            end
+        endcase
     end
-end
 
-always @(posedge clk) begin
-    delay <= (row == 3'b111);
-    out_enable <= delay;
-end
+    integer i;
 
-// 3. SỬA LỖI DỊCH BIT: Dịch chính xác 14 bit và có làm tròn (+ 8192)
-always @(posedge clk) begin
-    if (delay) begin 
-        // 8192 là 2^13 (Dùng để làm tròn giá trị trước khi dịch phải 14 bit)
-        dct_out0 <= (dct_temp_sum[0] + 8192) >>> 14;
-        dct_out1 <= (dct_temp_sum[1] + 8192) >>> 14;
-        dct_out2 <= (dct_temp_sum[2] + 8192) >>> 14;
-        dct_out3 <= (dct_temp_sum[3] + 8192) >>> 14;
-        dct_out4 <= (dct_temp_sum[4] + 8192) >>> 14;
-        dct_out5 <= (dct_temp_sum[5] + 8192) >>> 14;
-        dct_out6 <= (dct_temp_sum[6] + 8192) >>> 14;
-        dct_out7 <= (dct_temp_sum[7] + 8192) >>> 14;
+    // Toàn bộ logic Tuần tự (Sequential) được gộp vào 1 khối duy nhất
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            delay <= 1'b0;
+            out_enable <= 1'b0;
+            for (i = 0; i < 8; i = i + 1) begin
+                dct_temp_sum[i] <= 27'b0;
+            end
+            dct_out_0 <= 12'b0; dct_out_1 <= 12'b0; dct_out_2 <= 12'b0; dct_out_3 <= 12'b0;
+            dct_out_4 <= 12'b0; dct_out_5 <= 12'b0; dct_out_6 <= 12'b0; dct_out_7 <= 12'b0;
+        end else begin
+            
+            // 1. Logic Cộng dồn (Accumulator)
+            if (enable) begin
+                if (index == 3'b000) begin
+                    for (i = 0; i < 8; i = i + 1) 
+                        dct_temp_sum[i] <= s_data_in * cos_value[i]; // Tự động reset bộ đếm khi index = 0
+                end else begin
+                    for (i = 0; i < 8; i = i + 1) 
+                        dct_temp_sum[i] <= dct_temp_sum[i] + (s_data_in * cos_value[i]);
+                end
+            end
+
+            // 2. Logic cờ báo hoàn tất (Tạo đúng 1 nhịp Pulse)
+            if (enable && index == 3'b111) begin
+                delay <= 1'b1;
+            end else begin
+                delay <= 1'b0;
+            end
+            
+            out_enable <= delay; // out_enable nháy lên đúng 1 xung clock
+
+            // 3. Logic Làm tròn và Dịch bit (Shifting & Rounding)
+            if (delay) begin 
+                dct_out_0 <= dct_temp_sum[0][13] ? dct_temp_sum[0][26:14] + 1 : dct_temp_sum[0][26:14];
+                dct_out_1 <= dct_temp_sum[1][13] ? dct_temp_sum[1][26:14] + 1 : dct_temp_sum[1][26:14];
+                dct_out_2 <= dct_temp_sum[2][13] ? dct_temp_sum[2][26:14] + 1 : dct_temp_sum[2][26:14];
+                dct_out_3 <= dct_temp_sum[3][13] ? dct_temp_sum[3][26:14] + 1 : dct_temp_sum[3][26:14];
+                dct_out_4 <= dct_temp_sum[4][13] ? dct_temp_sum[4][26:14] + 1 : dct_temp_sum[4][26:14];
+                dct_out_5 <= dct_temp_sum[5][13] ? dct_temp_sum[5][26:14] + 1 : dct_temp_sum[5][26:14];
+                dct_out_6 <= dct_temp_sum[6][13] ? dct_temp_sum[6][26:14] + 1 : dct_temp_sum[6][26:14];
+                dct_out_7 <= dct_temp_sum[7][13] ? dct_temp_sum[7][26:14] + 1 : dct_temp_sum[7][26:14];
+            end
+        end
     end
-end
 
 endmodule

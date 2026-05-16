@@ -13,27 +13,27 @@ module cr_dqh(
     wire dct_enable, quantizer_enable;
     
     // Wires nối từ DCT sang Quantizer
-    wire [10:0] Z11, Z12, Z13, Z14, Z15, Z16, Z17, Z18;
-    wire [10:0] Z21, Z22, Z23, Z24, Z25, Z26, Z27, Z28;
-    wire [10:0] Z31, Z32, Z33, Z34, Z35, Z36, Z37, Z38;
-    wire [10:0] Z41, Z42, Z43, Z44, Z45, Z46, Z47, Z48;
-    wire [10:0] Z51, Z52, Z53, Z54, Z55, Z56, Z57, Z58;
-    wire [10:0] Z61, Z62, Z63, Z64, Z65, Z66, Z67, Z68;
-    wire [10:0] Z71, Z72, Z73, Z74, Z75, Z76, Z77, Z78;
-    wire [10:0] Z81, Z82, Z83, Z84, Z85, Z86, Z87, Z88;
+    wire [11:0] Z11, Z12, Z13, Z14, Z15, Z16, Z17, Z18;
+    wire [11:0] Z21, Z22, Z23, Z24, Z25, Z26, Z27, Z28;
+    wire [11:0] Z31, Z32, Z33, Z34, Z35, Z36, Z37, Z38;
+    wire [11:0] Z41, Z42, Z43, Z44, Z45, Z46, Z47, Z48;
+    wire [11:0] Z51, Z52, Z53, Z54, Z55, Z56, Z57, Z58;
+    wire [11:0] Z61, Z62, Z63, Z64, Z65, Z66, Z67, Z68;
+    wire [11:0] Z71, Z72, Z73, Z74, Z75, Z76, Z77, Z78;
+    wire [11:0] Z81, Z82, Z83, Z84, Z85, Z86, Z87, Z88;
     
     // Wires nối từ Quantizer sang Huffman
-    wire [10:0] Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18; 	
-    wire [10:0] Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28; 
-    wire [10:0] Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q38; 
-    wire [10:0] Q41, Q42, Q43, Q44, Q45, Q46, Q47, Q48; 
-    wire [10:0] Q51, Q52, Q53, Q54, Q55, Q56, Q57, Q58; 
-    wire [10:0] Q61, Q62, Q63, Q64, Q65, Q66, Q67, Q68; 
-    wire [10:0] Q71, Q72, Q73, Q74, Q75, Q76, Q77, Q78; 
-    wire [10:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88; 
+    wire [11:0] Q11, Q12, Q13, Q14, Q15, Q16, Q17, Q18; 	
+    wire [11:0] Q21, Q22, Q23, Q24, Q25, Q26, Q27, Q28; 
+    wire [11:0] Q31, Q32, Q33, Q34, Q35, Q36, Q37, Q38; 
+    wire [11:0] Q41, Q42, Q43, Q44, Q45, Q46, Q47, Q48; 
+    wire [11:0] Q51, Q52, Q53, Q54, Q55, Q56, Q57, Q58; 
+    wire [11:0] Q61, Q62, Q63, Q64, Q65, Q66, Q67, Q68; 
+    wire [11:0] Q71, Q72, Q73, Q74, Q75, Q76, Q77, Q78; 
+    wire [11:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88; 
 
     // 1. Khối 2D-DCT (Dùng chung module cho cả Y, Cb, Cr)
-    dct_2d_1channel u_dct(
+    dct_2d_1channel cr_dct_inst(
         .clk(clk), .rst(rst), .enable(enable), .data_in(data_in), 
         .Z11_final(Z11), .Z12_final(Z12), .Z13_final(Z13), .Z14_final(Z14), .Z15_final(Z15), .Z16_final(Z16), .Z17_final(Z17), .Z18_final(Z18), 
         .Z21_final(Z21), .Z22_final(Z22), .Z23_final(Z23), .Z24_final(Z24), .Z25_final(Z25), .Z26_final(Z26), .Z27_final(Z27), .Z28_final(Z28), 
@@ -47,7 +47,7 @@ module cr_dqh(
     ); 
 	
     // 2. Khối Quantizer cho Cr
-    chroma_quantizer u_quant(
+    chroma_quantizer cr_quant(
         .clk(clk), .rst(rst), .enable(dct_enable),
         .Z11(Z11), .Z12(Z12), .Z13(Z13), .Z14(Z14), .Z15(Z15), .Z16(Z16), .Z17(Z17), .Z18(Z18), 
         .Z21(Z21), .Z22(Z22), .Z23(Z23), .Z24(Z24), .Z25(Z25), .Z26(Z26), .Z27(Z27), .Z28(Z28),
@@ -69,7 +69,7 @@ module cr_dqh(
     );
 
     // 3. Khối Huffman cho Cr (Lưu ý: Có phép vị tự/Transpose ma trận Qij -> Cji như bản gốc)
-    chroma_huff u_huff(
+    chroma_huff cr_huff(
         .clk(clk), .rst(rst), .enable(quantizer_enable), 
         .C11(Q11), .C12(Q21), .C13(Q31), .C14(Q41), .C15(Q51), .C16(Q61), .C17(Q71), .C18(Q81), 
         .C21(Q12), .C22(Q22), .C23(Q32), .C24(Q42), .C25(Q52), .C26(Q62), .C27(Q72), .C28(Q82),
@@ -82,7 +82,7 @@ module cr_dqh(
         .JPEG_bitstream(JPEG_bitstream), 
         .data_ready(data_ready), 
         .output_reg_count(cr_orc),
-        .end_of_block_output(end_of_block_output),
+        .end_of_block_output(),
         .end_of_block_empty(end_of_block_empty)
     );	
 

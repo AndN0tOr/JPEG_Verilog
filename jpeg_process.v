@@ -22,21 +22,26 @@ output		y_eob_empty, cb_eob_empty, cr_eob_empty;
 wire	rgb_enable;
 wire	[23:0]	dct_data_in;
 
+wire cb_eob_output;
+wire cr_eob_output;
 
-	RGB2YCBCR u4(.clk(clk), .rst(rst), .enable(enable), 
-	.data_in(data_in), .data_out(dct_data_in), .enable_out(rgb_enable));
+
+	color_trans color_trans_inst0(.clk(clk), .rst(rst), .enable(enable), 
+	.data_in(data_in), .data_out(dct_data_in), .out_enable(rgb_enable));
 	
-	cr_dqh u11(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[23:16]),
+	cr_dqh cr_dqh_inst0(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[23:16]),
 	.JPEG_bitstream(cr_JPEG_bitstream), 
  	 .data_ready(cr_data_ready), .cr_orc(cr_orc),
+	 .end_of_block_output(cr_eob_output),
  	 .end_of_block_empty(cr_eob_empty)); 
 	
-	cb_dqh u12(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[15:8]),
+	cb_dqh cb_dqh_inst0(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[15:8]),
 	.JPEG_bitstream(cb_JPEG_bitstream), 
  	 .data_ready(cb_data_ready), .cb_orc(cb_orc),
+	 .end_of_block_output(cb_eob_output),
  	 .end_of_block_empty(cb_eob_empty)); 
  
-  	y_dqh u13(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[7:0]),
+  	y_dqh y_dqh_inst0(.clk(clk), .rst(rst), .enable(rgb_enable), .data_in(dct_data_in[7:0]),
 	.JPEG_bitstream(y_JPEG_bitstream), 
  	 .data_ready(y_data_ready), .y_orc(y_orc),
  	 .end_of_block_output(y_eob_output), .end_of_block_empty(y_eob_empty)); 

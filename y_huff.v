@@ -2,16 +2,17 @@ module y_huff(
     input clk, 
     input rst, 
     input enable,
-    // Ngõ vào giữ nguyên interface để tương thích
-    input [10:0] Y11, Y12, Y13, Y14, Y15, Y16, Y17, Y18, 
-    input [10:0] Y21, Y22, Y23, Y24, Y25, Y26, Y27, Y28,
-    input [10:0] Y31, Y32, Y33, Y34, Y35, Y36, Y37, Y38, 
-    input [10:0] Y41, Y42, Y43, Y44, Y45, Y46, Y47, Y48,
-    input [10:0] Y51, Y52, Y53, Y54, Y55, Y56, Y57, Y58, 
-    input [10:0] Y61, Y62, Y63, Y64, Y65, Y66, Y67, Y68,
-    input [10:0] Y71, Y72, Y73, Y74, Y75, Y76, Y77, Y78, 
-    input [10:0] Y81, Y82, Y83, Y84, Y85, Y86, Y87, Y88,
+    // Ngõ vào khối 8x8 kênh Y - ĐÃ CHUYỂN SANG 12 BIT
+    input [11:0] Y11, Y12, Y13, Y14, Y15, Y16, Y17, Y18, 
+    input [11:0] Y21, Y22, Y23, Y24, Y25, Y26, Y27, Y28,
+    input [11:0] Y31, Y32, Y33, Y34, Y35, Y36, Y37, Y38, 
+    input [11:0] Y41, Y42, Y43, Y44, Y45, Y46, Y47, Y48,
+    input [11:0] Y51, Y52, Y53, Y54, Y55, Y56, Y57, Y58, 
+    input [11:0] Y61, Y62, Y63, Y64, Y65, Y66, Y67, Y68,
+    input [11:0] Y71, Y72, Y73, Y74, Y75, Y76, Y77, Y78, 
+    input [11:0] Y81, Y82, Y83, Y84, Y85, Y86, Y87, Y88,
     
+    // Output GIỮ NGUYÊN
     output reg [31:0] JPEG_bitstream, 
     output reg data_ready, 
     output reg [4:0]  output_reg_count, 
@@ -20,9 +21,9 @@ module y_huff(
 );
 
     // -------------------------------------------------------------------------
-    // 1. ZIG-ZAG MAPPING BẰNG MẢNG (ARRAY) THAY VÌ SHIFT REGISTERS
+    // 1. ZIG-ZAG MAPPING BẰNG MẢNG (ARRAY) ĐÃ ĐƯỢC CHUYỂN LÊN 12-BIT
     // -------------------------------------------------------------------------
-    wire [10:0] zz [0:63];
+    wire [11:0] zz [0:63];
     
     assign zz[0]=Y11;  assign zz[1]=Y12;  assign zz[2]=Y21;  assign zz[3]=Y31;
     assign zz[4]=Y22;  assign zz[5]=Y13;  assign zz[6]=Y14;  assign zz[7]=Y23;
@@ -43,6 +44,9 @@ module y_huff(
 
     // Tìm index cuối cùng khác 0 để chèn End Of Block (EOB) sớm
     reg [5:0] last_nz_idx;
+
+    reg [7:0] run_size_idx;
+    
     integer i;
     always @(*) begin
         last_nz_idx = 0;
@@ -61,7 +65,7 @@ module y_huff(
     reg [7:0]  Y_AC_run_code [0:255]; // Dùng 256 cho an toàn index
 
     initial begin
-        // DC Codes
+        // DC Codes (Dành riêng cho kênh Y - Luminance)
         Y_DC[0]=11'b000; Y_DC_code_length[0]=2;
         Y_DC[1]=11'b010; Y_DC_code_length[1]=2;
         Y_DC[2]=11'b100; Y_DC_code_length[2]=2;
@@ -75,14 +79,13 @@ module y_huff(
         Y_DC[10]=11'b1111111110; Y_DC_code_length[10]=10;
         Y_DC[11]=11'b11111111110; Y_DC_code_length[11]=11;
 
-        // Một số AC Codes minh họa (Bạn có thể nạp toàn bộ danh sách cũ vào đây)
-        // Thay vì viết tràn lan, block initial giúp FPGAs tự suy luận ROM
-        // ... (Sao chép lại các giá trị Y_AC, Y_AC_code_length, Y_AC_run_code từ code cũ)
-        Y_AC[0] = 16'b0000; Y_AC_code_length[0] = 2; Y_AC_run_code[1] = 0; //... (Rút gọn để tiết kiệm không gian hiển thị)
+        // Một số AC Codes minh họa
+        // Vui lòng paste lại toàn bộ danh sách Y_AC thực tế của bạn vào đây
+        Y_AC[0] = 16'b0000; Y_AC_code_length[0] = 4; Y_AC_run_code[1] = 0; // End of Block (Y)
     end
 
     // -------------------------------------------------------------------------
-    // 3. HÀM TÍNH TOÁN BIT LENGTH & BIÊN ĐỘ (Thay cho hàng loạt biến trung gian)
+    // 3. HÀM TÍNH TOÁN BIT LENGTH & BIÊN ĐỘ
     // -------------------------------------------------------------------------
     function [3:0] calc_vli_size;
         input [11:0] val;
@@ -125,7 +128,8 @@ module y_huff(
     reg [4:0]  push_len;
     reg push_valid;
     
-    wire [11:0] curr_val = {zz[count][10], zz[count]}; // Sign extend
+    // Vì zz giờ đã là 12 bit, ta chỉ việc gán thẳng vào curr_val
+    wire [11:0] curr_val = zz[count]; 
     wire [11:0] diff_val = curr_val - dc_prev;
 
     always @(posedge clk) begin
@@ -182,7 +186,6 @@ module y_huff(
                 end 
                 else begin
                     // Có giá trị khác 0 -> Kết hợp zrl và size để tra bảng Huffman
-                    reg [7:0] run_size_idx;
                     run_size_idx = {zrl, calc_vli_size(curr_val)};
                     
                     push_data <= { Y_AC[ Y_AC_run_code[run_size_idx] ], calc_vli_amp(curr_val) };
@@ -199,7 +202,7 @@ module y_huff(
     end
 
     // -------------------------------------------------------------------------
-    // 5. BITSTREAM PACKER (Thu gọn việc gán từng bit)
+    // 5. BITSTREAM PACKER
     // -------------------------------------------------------------------------
     reg [63:0] bit_buffer;
     reg [6:0]  bit_cnt;
@@ -226,7 +229,7 @@ module y_huff(
                 JPEG_bitstream <= bit_buffer[bit_cnt - 1 -: 32];
                 bit_cnt <= bit_cnt - 32;
                 data_ready <= 1;
-                output_reg_count <= 32; // Khớp với logic cũ nếu cần output số lượng
+                output_reg_count <= 32; 
             end
             
             // Xử lý xả bitstream còn dư khi kết thúc Block

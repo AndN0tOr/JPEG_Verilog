@@ -2,16 +2,17 @@ module chroma_huff(
     input clk, 
     input rst, 
     input enable,
-    // Ngõ vào của khối 8x8 kênh Cb (hoặc Cr)
-    input [10:0] C11, C12, C13, C14, C15, C16, C17, C18, 
-    input [10:0] C21, C22, C23, C24, C25, C26, C27, C28,
-    input [10:0] C31, C32, C33, C34, C35, C36, C37, C38, 
-    input [10:0] C41, C42, C43, C44, C45, C46, C47, C48,
-    input [10:0] C51, C52, C53, C54, C55, C56, C57, C58, 
-    input [10:0] C61, C62, C63, C64, C65, C66, C67, C68,
-    input [10:0] C71, C72, C73, C74, C75, C76, C77, C78, 
-    input [10:0] C81, C82, C83, C84, C85, C86, C87, C88,
+    // Ngõ vào của khối 8x8 kênh Cb (hoặc Cr) - ĐÃ CHUYỂN SANG 12 BIT
+    input [11:0] C11, C12, C13, C14, C15, C16, C17, C18, 
+    input [11:0] C21, C22, C23, C24, C25, C26, C27, C28,
+    input [11:0] C31, C32, C33, C34, C35, C36, C37, C38, 
+    input [11:0] C41, C42, C43, C44, C45, C46, C47, C48,
+    input [11:0] C51, C52, C53, C54, C55, C56, C57, C58, 
+    input [11:0] C61, C62, C63, C64, C65, C66, C67, C68,
+    input [11:0] C71, C72, C73, C74, C75, C76, C77, C78, 
+    input [11:0] C81, C82, C83, C84, C85, C86, C87, C88,
     
+    // Output GIỮ NGUYÊN
     output reg [31:0] JPEG_bitstream, 
     output reg data_ready, 
     output reg [4:0]  output_reg_count, 
@@ -20,9 +21,9 @@ module chroma_huff(
 );
 
     // -------------------------------------------------------------------------
-    // 1. ZIG-ZAG MAPPING BẰNG MẢNG
+    // 1. ZIG-ZAG MAPPING BẰNG MẢNG (Đã chuyển sang 12 bit)
     // -------------------------------------------------------------------------
-    wire [10:0] zz [0:63];
+    wire [11:0] zz [0:63];
     
     assign zz[0]=C11;  assign zz[1]=C12;  assign zz[2]=C21;  assign zz[3]=C31;
     assign zz[4]=C22;  assign zz[5]=C13;  assign zz[6]=C14;  assign zz[7]=C23;
@@ -53,8 +54,6 @@ module chroma_huff(
 
     // -------------------------------------------------------------------------
     // 2. ROM BẢNG HUFFMAN CHO CHROMINANCE (Cb/Cr)
-    // LƯU Ý: Nếu bảng của tác giả cũ có khác biệt, bạn paste các giá trị AC/DC 
-    // của file cb_huff cũ vào trong khối initial này nhé.
     // -------------------------------------------------------------------------
     reg [10:0] C_DC [0:11];
     reg [3:0]  C_DC_code_length [0:11];
@@ -66,7 +65,6 @@ module chroma_huff(
 
     initial begin
         // --- BẢNG CHROMINANCE DC MẶC ĐỊNH ---
-        // (Đây là bảng DC chuẩn của Cb/Cr, có thể khác một chút với kênh Y)
         C_DC[0]=11'b00;         C_DC_code_length[0]=2;
         C_DC[1]=11'b01;         C_DC_code_length[1]=2;
         C_DC[2]=11'b10;         C_DC_code_length[2]=2;
@@ -81,14 +79,12 @@ module chroma_huff(
         C_DC[11]=11'b11111111110;C_DC_code_length[11]=11;
 
         // --- BẢNG CHROMINANCE AC MẶC ĐỊNH ---
-        // PASTE danh sách C_AC, C_AC_code_length, C_AC_run_code của tác giả gốc vào đây
-        // VD:
+        // (Vui lòng paste tiếp dữ liệu AC thực tế của bạn vào đây)
         C_AC[0] = 16'b00; C_AC_code_length[0] = 2; C_AC_run_code[1] = 0; // End Of Block
-        // ... (Khai báo các mã AC tương tự như kênh Y, nhưng dùng số liệu của Cb)
     end
 
     // -------------------------------------------------------------------------
-    // 3. HÀM TÍNH TOÁN BIT LENGTH & BIÊN ĐỘ (Dùng chung logic tính VLI)
+    // 3. HÀM TÍNH TOÁN BIT LENGTH & BIÊN ĐỘ
     // -------------------------------------------------------------------------
     function [3:0] calc_vli_size;
         input [11:0] val;
@@ -131,7 +127,8 @@ module chroma_huff(
     reg [4:0]  push_len;
     reg push_valid;
     
-    wire [11:0] curr_val = {zz[count][10], zz[count]}; // Mở rộng dấu
+    // zz đã là 12 bit, ta nối thẳng vào curr_val
+    wire [11:0] curr_val = zz[count]; 
     wire [11:0] diff_val = curr_val - dc_prev;
 
     always @(posedge clk) begin
@@ -156,7 +153,7 @@ module chroma_huff(
             push_valid <= 0; 
             
             if (count == 0) begin
-                // Xử lý hệ số DC (Dùng bảng C_DC)
+                // Xử lý hệ số DC
                 dc_prev <= curr_val;
                 
                 push_data <= { C_DC[calc_vli_size(diff_val)], calc_vli_amp(diff_val) };
@@ -174,7 +171,7 @@ module chroma_huff(
                 end_of_block_output <= 1;
             end 
             else begin
-                // Xử lý hệ số AC (Dùng bảng C_AC)
+                // Xử lý hệ số AC
                 if (curr_val == 0) begin
                     if (zrl == 15) begin
                         // ZRL = 15 -> Xuất mã (15,0)
@@ -187,7 +184,7 @@ module chroma_huff(
                     end
                 end 
                 else begin
-                    // Có giá trị khác 0 -> Kết hợp zrl và size để tra bảng Huffman
+                    // Có giá trị khác 0
                     run_size_idx = {zrl, calc_vli_size(curr_val)};
                     
                     push_data <= { C_AC[ C_AC_run_code[run_size_idx] ], calc_vli_amp(curr_val) };
