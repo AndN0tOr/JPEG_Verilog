@@ -162,21 +162,21 @@ module dct_2d_1channel (
     );
 
     // --- Gán Output (Flattening) ---
-    assign out00 = dct_result[0][0]; assign out01 = dct_result[0][1]; assign out02 = dct_result[0][2]; assign out03 = dct_result[0][3];
-    assign out04 = dct_result[0][4]; assign out05 = dct_result[0][5]; assign out06 = dct_result[0][6]; assign out07 = dct_result[0][7];
-    assign out10 = dct_result[1][0]; assign out11 = dct_result[1][1]; assign out12 = dct_result[1][2]; assign out13 = dct_result[1][3];
-    assign out14 = dct_result[1][4]; assign out15 = dct_result[1][5]; assign out16 = dct_result[1][6]; assign out17 = dct_result[1][7];
-    assign out20 = dct_result[2][0]; assign out21 = dct_result[2][1]; assign out22 = dct_result[2][2]; assign out23 = dct_result[2][3];
-    assign out24 = dct_result[2][4]; assign out25 = dct_result[2][5]; assign out26 = dct_result[2][6]; assign out27 = dct_result[2][7];
-    assign out30 = dct_result[3][0]; assign out31 = dct_result[3][1]; assign out32 = dct_result[3][2]; assign out33 = dct_result[3][3];
-    assign out34 = dct_result[3][4]; assign out35 = dct_result[3][5]; assign out36 = dct_result[3][6]; assign out37 = dct_result[3][7];
-    assign out40 = dct_result[4][0]; assign out41 = dct_result[4][1]; assign out42 = dct_result[4][2]; assign out43 = dct_result[4][3];
-    assign out44 = dct_result[4][4]; assign out45 = dct_result[4][5]; assign out46 = dct_result[4][6]; assign out47 = dct_result[4][7];
-    assign out50 = dct_result[5][0]; assign out51 = dct_result[5][1]; assign out52 = dct_result[5][2]; assign out53 = dct_result[5][3];
-    assign out54 = dct_result[5][4]; assign out55 = dct_result[5][5]; assign out56 = dct_result[5][6]; assign out57 = dct_result[5][7];
-    assign out60 = dct_result[6][0]; assign out61 = dct_result[6][1]; assign out62 = dct_result[6][2]; assign out63 = dct_result[6][3];
-    assign out64 = dct_result[6][4]; assign out65 = dct_result[6][5]; assign out66 = dct_result[6][6]; assign out67 = dct_result[6][7];
-    assign out70 = dct_result[7][0]; assign out71 = dct_result[7][1]; assign out72 = dct_result[7][2]; assign out73 = dct_result[7][3];
-    assign out74 = dct_result[7][4]; assign out75 = dct_result[7][5]; assign out76 = dct_result[7][6]; assign out77 = dct_result[7][7];
+    assign Z11_final = dct_result[0][0]; assign Z12_final = dct_result[0][1]; assign Z13_final = dct_result[0][2]; assign Z14_final = dct_result[0][3];
+    assign Z15_final = dct_result[0][4]; assign Z16_final = dct_result[0][5]; assign Z17_final = dct_result[0][6]; assign Z18_final = dct_result[0][7];
+    assign Z21_final = dct_result[1][0]; assign Z22_final = dct_result[1][1]; assign Z23_final = dct_result[1][2]; assign Z24_final = dct_result[1][3];
+    assign Z25_final = dct_result[1][4]; assign Z26_final = dct_result[1][5]; assign Z27_final = dct_result[1][6]; assign Z28_final = dct_result[1][7];
+    assign Z31_final = dct_result[2][0]; assign Z32_final = dct_result[2][1]; assign Z33_final = dct_result[2][2]; assign Z34_final = dct_result[2][3];
+    assign Z35_final = dct_result[2][4]; assign Z36_final = dct_result[2][5]; assign Z37_final = dct_result[2][6]; assign Z38_final = dct_result[2][7];
+    assign Z41_final = dct_result[3][0]; assign Z42_final = dct_result[3][1]; assign Z43_final = dct_result[3][2]; assign Z44_final = dct_result[3][3];
+    assign Z45_final = dct_result[3][4]; assign Z46_final = dct_result[3][5]; assign Z47_final = dct_result[3][6]; assign Z48_final = dct_result[3][7];
+    assign Z51_final = dct_result[4][0]; assign Z52_final = dct_result[4][1]; assign Z53_final = dct_result[4][2]; assign Z54_final = dct_result[4][3];
+    assign Z55_final = dct_result[4][4]; assign Z56_final = dct_result[4][5]; assign Z57_final = dct_result[4][6]; assign Z58_final = dct_result[4][7];
+    assign Z61_final = dct_result[5][0]; assign Z62_final = dct_result[5][1]; assign Z63_final = dct_result[5][2]; assign Z64_final = dct_result[5][3];
+    assign Z65_final = dct_result[5][4]; assign Z66_final = dct_result[5][5]; assign Z67_final = dct_result[5][6]; assign Z68_final = dct_result[5][7];
+    assign Z71_final = dct_result[6][0]; assign Z72_final = dct_result[6][1]; assign Z73_final = dct_result[6][2]; assign Z74_final = dct_result[6][3];
+    assign Z75_final = dct_result[6][4]; assign Z76_final = dct_result[6][5]; assign Z77_final = dct_result[6][6]; assign Z78_final = dct_result[6][7];
+    assign Z81_final = dct_result[7][0]; assign Z82_final = dct_result[7][1]; assign Z83_final = dct_result[7][2]; assign Z84_final = dct_result[7][3];
+    assign Z85_final = dct_result[7][4]; assign Z86_final = dct_result[7][5]; assign Z87_final = dct_result[7][6]; assign Z88_final = dct_result[7][7];
 
 endmodule

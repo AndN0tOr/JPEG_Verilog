@@ -33,9 +33,9 @@ module jpeg_process_fifo(
     wire        cb_write_enable1, cb_write_enable2, cr_write_enable1, cr_write_enable2;
     wire        cb_read_req1, cb_read_req2, cr_read_req1, cr_read_req2;
 
-    wire cb_write_enable = cb_data_ready && !cb_eob_empty;
-    wire cr_write_enable = cr_data_ready && !cr_eob_empty;
-    wire y_write_enable  = y_data_ready  && !y_eob_empty;
+    wire cb_write_enable = cb_data_ready; // Bỏ && !cb_eob_empty
+    wire cr_write_enable = cr_data_ready; // Bỏ && !cr_eob_empty
+    wire y_write_enable  = y_data_ready;  // Bỏ && !y_eob_empty
 
     // Các thanh ghi dồn kênh và dịch bit
     reg [4:0]   orc, orc_cb, orc_cr, old_orc_reg, sorc_reg, roll_orc_reg;

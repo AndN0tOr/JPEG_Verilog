@@ -33,34 +33,36 @@
 
 `timescale 1ns / 100ps
 
-module sync_fifo_32 (clk, rst, read_req, write_data, write_enable, 
-read_data, fifo_empty, rdata_valid);
+module sync_fifo_32 (clk, rst, read_req, write_data, write_enable,
+read_data, fifo_empty, rdata_valid, fifo_full);
 input	clk;
 input	rst;
 input	read_req;
 input [31:0] write_data;
 input write_enable;
-output [31:0] read_data;  
-output  fifo_empty; 
+output [31:0] read_data;
+output  fifo_empty;
 output	rdata_valid;
-   
-reg [4:0] read_ptr;
-reg [4:0] write_ptr;
-reg [31:0] mem [0:15];
+output  fifo_full;
+
+reg [6:0] read_ptr;
+reg [6:0] write_ptr;
+reg [31:0] mem [0:63];
 reg [31:0] read_data;
 reg rdata_valid;
-wire [3:0] write_addr = write_ptr[3:0];
-wire [3:0] read_addr = read_ptr[3:0];	
+wire [5:0] write_addr = write_ptr[5:0];
+wire [5:0] read_addr = read_ptr[5:0];
 wire read_enable = read_req && (~fifo_empty);
 assign fifo_empty = (read_ptr == write_ptr);
+assign fifo_full = (write_ptr[5:0] == read_ptr[5:0]) && (write_ptr[6] != read_ptr[6]);
 
 
 always @(posedge clk)
   begin
    if (rst)
-      write_ptr <= {(5){1'b0}};
+      write_ptr <= 7'b0;
    else if (write_enable)
-      write_ptr <= write_ptr + {{4{1'b0}},1'b1};
+      write_ptr <= write_ptr + 7'b1;
   end
 
 always @(posedge clk)
@@ -76,9 +78,9 @@ end
 always @(posedge clk)
  begin
    if (rst)
-      read_ptr <= {(5){1'b0}};
+      read_ptr <= 7'b0;
    else if (read_enable)
-      read_ptr <= read_ptr + {{4{1'b0}},1'b1};
+      read_ptr <= read_ptr + 7'b1;
 end
 
 // Mem write

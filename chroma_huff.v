@@ -24,7 +24,7 @@ module chroma_huff(
     // 1. ZIG-ZAG MAPPING BẰNG MẢNG (Đã chuyển sang 12 bit)
     // -------------------------------------------------------------------------
     wire [11:0] zz [0:63];
-    
+
     assign zz[0]=C11;  assign zz[1]=C12;  assign zz[2]=C21;  assign zz[3]=C31;
     assign zz[4]=C22;  assign zz[5]=C13;  assign zz[6]=C14;  assign zz[7]=C23;
     assign zz[8]=C32;  assign zz[9]=C41;  assign zz[10]=C51; assign zz[11]=C42;
@@ -43,14 +43,9 @@ module chroma_huff(
     assign zz[60]=C68; assign zz[61]=C78; assign zz[62]=C87; assign zz[63]=C88;
 
     // Tìm index cuối cùng khác 0 để chèn End Of Block (EOB)
+    // Tính từ zz_buf thay vì zz để đảm bảo đồng bộ với data đang xử lý
     reg [5:0] last_nz_idx;
     integer i;
-    always @(*) begin
-        last_nz_idx = 0;
-        for (i = 63; i >= 1; i = i - 1) begin
-            if (zz[i] != 0 && last_nz_idx == 0) last_nz_idx = i;
-        end
-    end
 
     // -------------------------------------------------------------------------
     // 2. ROM BẢNG HUFFMAN CHO CHROMINANCE (Cb/Cr)
@@ -78,9 +73,36 @@ module chroma_huff(
         C_DC[10]=11'b1111111110;C_DC_code_length[10]=10;
         C_DC[11]=11'b11111111110;C_DC_code_length[11]=11;
 
-        // --- BẢNG CHROMINANCE AC MẶC ĐỊNH ---
-        // (Vui lòng paste tiếp dữ liệu AC thực tế của bạn vào đây)
-        C_AC[0] = 16'b00; C_AC_code_length[0] = 2; C_AC_run_code[1] = 0; // End Of Block
+        // --- BẢNG CHROMINANCE AC MẶC ĐỊNH (JPEG Standard) ---
+        C_AC[0] = 16'h0000; C_AC_code_length[0] = 2;  C_AC_run_code[8'h00] = 0;   // EOB
+        C_AC[1] = 16'h0001; C_AC_code_length[1] = 2;  C_AC_run_code[8'h01] = 1;   // (0,1)
+        C_AC[2] = 16'h0004; C_AC_code_length[2] = 3;  C_AC_run_code[8'h02] = 2;   // (0,2)
+        C_AC[3] = 16'h000A; C_AC_code_length[3] = 4;  C_AC_run_code[8'h03] = 3;   // (0,3)
+        C_AC[4] = 16'h0018; C_AC_code_length[4] = 5;  C_AC_run_code[8'h04] = 4;   // (0,4)
+        C_AC[5] = 16'h0019; C_AC_code_length[5] = 5;  C_AC_run_code[8'h05] = 5;   // (0,5)
+        C_AC[6] = 16'h0038; C_AC_code_length[6] = 6;  C_AC_run_code[8'h06] = 6;   // (0,6)
+        C_AC[7] = 16'h0078; C_AC_code_length[7] = 7;  C_AC_run_code[8'h07] = 7;   // (0,7)
+        C_AC[8] = 16'h01F4; C_AC_code_length[8] = 9;  C_AC_run_code[8'h08] = 8;   // (0,8)
+        C_AC[9] = 16'h03F6; C_AC_code_length[9] = 10; C_AC_run_code[8'h09] = 9;   // (0,9)
+        C_AC[10] = 16'hFF82; C_AC_code_length[10] = 16; C_AC_run_code[8'h0A] = 10; // (0,A)
+        C_AC[11] = 16'h000B; C_AC_code_length[11] = 4;  C_AC_run_code[8'h11] = 11; // (1,1)
+        C_AC[12] = 16'h0039; C_AC_code_length[12] = 6;  C_AC_run_code[8'h12] = 12; // (1,2)
+        C_AC[13] = 16'h00F6; C_AC_code_length[13] = 8;  C_AC_run_code[8'h13] = 13; // (1,3)
+        C_AC[14] = 16'h01F5; C_AC_code_length[14] = 9;  C_AC_run_code[8'h14] = 14; // (1,4)
+        C_AC[15] = 16'hFF83; C_AC_code_length[15] = 16; C_AC_run_code[8'h15] = 15; // (1,5)
+        C_AC[16] = 16'h003A; C_AC_code_length[16] = 6;  C_AC_run_code[8'h21] = 16; // (2,1)
+        C_AC[17] = 16'h00F7; C_AC_code_length[17] = 8;  C_AC_run_code[8'h22] = 17; // (2,2)
+        C_AC[18] = 16'h03F7; C_AC_code_length[18] = 10; C_AC_run_code[8'h23] = 18; // (2,3)
+        C_AC[19] = 16'h0079; C_AC_code_length[19] = 7;  C_AC_run_code[8'h31] = 19; // (3,1)
+        C_AC[20] = 16'h01F6; C_AC_code_length[20] = 9;  C_AC_run_code[8'h32] = 20; // (3,2)
+        C_AC[21] = 16'h007A; C_AC_code_length[21] = 7;  C_AC_run_code[8'h41] = 21; // (4,1)
+        C_AC[22] = 16'h003B; C_AC_code_length[22] = 6;  C_AC_run_code[8'h51] = 22; // (5,1)
+        C_AC[23] = 16'h01F7; C_AC_code_length[23] = 9;  C_AC_run_code[8'hF0] = 23; // ZRL (15,0)
+        // Initialize remaining entries
+        for (i = 24; i < 162; i = i + 1) begin
+            C_AC[i] = 16'h0000;
+            C_AC_code_length[i] = 2;
+        end
     end
 
     // -------------------------------------------------------------------------
@@ -122,13 +144,50 @@ module chroma_huff(
     reg [11:0] dc_prev;  // Lưu giá trị DC của block trước đó
     reg active;
 
+    // Edge detection for enable signal
+    reg enable_prev;
+    wire enable_posedge = enable && !enable_prev;
+
+    always @(posedge clk) begin
+        if (rst)
+            enable_prev <= 0;
+        else
+            enable_prev <= enable;
+    end
+
+    // FIFO to buffer incoming blocks (depth = 64 for better throughput)
+    reg [11:0] fifo_mem [0:63][0:63]; // 64 blocks, each 64 coefficients
+    reg [5:0] fifo_wr_ptr;
+    reg [5:0] fifo_rd_ptr;
+    wire [5:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
+    wire fifo_empty = (fifo_count == 0);
+    wire fifo_full = (fifo_count == 63);
+
+    integer j;
+
+    // Write to FIFO when enable posedge detected
+    always @(posedge clk) begin
+        if (rst) begin
+            fifo_wr_ptr <= 0;
+        end
+        else if (enable_posedge && !fifo_full) begin
+            for (j = 0; j < 64; j = j + 1) begin
+                fifo_mem[fifo_wr_ptr][j] <= zz[j];
+            end
+            fifo_wr_ptr <= fifo_wr_ptr + 1;
+        end
+    end
+
+    // Buffer to hold current block being processed
+    reg [11:0] zz_buf [0:63];
+
     // Các biến dùng cho Bitstream Packer
     reg [27:0] push_data;
     reg [4:0]  push_len;
     reg push_valid;
-    
-    // zz đã là 12 bit, ta nối thẳng vào curr_val
-    wire [11:0] curr_val = zz[count]; 
+
+    // Read from buffered data instead of direct input
+    wire [11:0] curr_val = zz_buf[count];
     wire [11:0] diff_val = curr_val - dc_prev;
 
     always @(posedge clk) begin
@@ -140,15 +199,29 @@ module chroma_huff(
             push_valid <= 0;
             end_of_block_output <= 0;
             end_of_block_empty <= 0;
-        end 
-        else if (enable) begin
+            fifo_rd_ptr <= 0;
+        end
+        else if (!active && !fifo_empty) begin
+            // Start processing next block from FIFO
+            for (j = 0; j < 64; j = j + 1) begin
+                zz_buf[j] <= fifo_mem[fifo_rd_ptr][j];
+            end
+            fifo_rd_ptr <= fifo_rd_ptr + 1;
+
+            // Calculate last_nz_idx from the block being loaded
+            last_nz_idx <= 0;
+            for (i = 63; i >= 1; i = i - 1) begin
+                if (fifo_mem[fifo_rd_ptr][i] != 0 && last_nz_idx == 0)
+                    last_nz_idx <= i;
+            end
+
             count <= 0;
             active <= 1;
             zrl <= 0;
             push_valid <= 0;
             end_of_block_output <= 0;
-            end_of_block_empty <= (last_nz_idx == 0);
-        end 
+            end_of_block_empty <= 0; // Will be updated based on calculated last_nz_idx
+        end
         else if (active) begin
             push_valid <= 0; 
             
@@ -233,7 +306,7 @@ module chroma_huff(
             
             // Xả nốt bitstream thừa khi kết thúc Block (padding với số 1)
             if (end_of_block_output && bit_cnt > 0 && bit_cnt < 32) begin
-                JPEG_bitstream <= (bit_buffer[bit_cnt - 1 -: 32]) | ((32'hFFFF_FFFF) >> bit_cnt);
+                JPEG_bitstream <= (bit_buffer[31:0] << (32 - bit_cnt)) | ((32'hFFFF_FFFF) >> bit_cnt);
                 bit_cnt <= 0;
                 data_ready <= 1;
                 output_reg_count <= bit_cnt;

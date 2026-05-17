@@ -24,7 +24,7 @@ module y_huff(
     // 1. ZIG-ZAG MAPPING BẰNG MẢNG (ARRAY) ĐÃ ĐƯỢC CHUYỂN LÊN 12-BIT
     // -------------------------------------------------------------------------
     wire [11:0] zz [0:63];
-    
+
     assign zz[0]=Y11;  assign zz[1]=Y12;  assign zz[2]=Y21;  assign zz[3]=Y31;
     assign zz[4]=Y22;  assign zz[5]=Y13;  assign zz[6]=Y14;  assign zz[7]=Y23;
     assign zz[8]=Y32;  assign zz[9]=Y41;  assign zz[10]=Y51; assign zz[11]=Y42;
@@ -43,17 +43,10 @@ module y_huff(
     assign zz[60]=Y68; assign zz[61]=Y78; assign zz[62]=Y87; assign zz[63]=Y88;
 
     // Tìm index cuối cùng khác 0 để chèn End Of Block (EOB) sớm
+    // Tính từ zz_buf thay vì zz để đảm bảo đồng bộ với data đang xử lý
     reg [5:0] last_nz_idx;
-
     reg [7:0] run_size_idx;
-    
     integer i;
-    always @(*) begin
-        last_nz_idx = 0;
-        for (i = 63; i >= 1; i = i - 1) begin
-            if (zz[i] != 0 && last_nz_idx == 0) last_nz_idx = i;
-        end
-    end
 
     // -------------------------------------------------------------------------
     // 2. ROM BẢNG HUFFMAN (Khởi tạo bằng initial cho gọn)
@@ -79,9 +72,36 @@ module y_huff(
         Y_DC[10]=11'b1111111110; Y_DC_code_length[10]=10;
         Y_DC[11]=11'b11111111110; Y_DC_code_length[11]=11;
 
-        // Một số AC Codes minh họa
-        // Vui lòng paste lại toàn bộ danh sách Y_AC thực tế của bạn vào đây
-        Y_AC[0] = 16'b0000; Y_AC_code_length[0] = 4; Y_AC_run_code[1] = 0; // End of Block (Y)
+        // AC Codes - JPEG Standard Luminance AC Huffman Table
+        Y_AC[0] = 16'h000A; Y_AC_code_length[0] = 4;  Y_AC_run_code[8'h00] = 0;   // EOB
+        Y_AC[1] = 16'h0000; Y_AC_code_length[1] = 2;  Y_AC_run_code[8'h01] = 1;   // (0,1)
+        Y_AC[2] = 16'h0001; Y_AC_code_length[2] = 2;  Y_AC_run_code[8'h02] = 2;   // (0,2)
+        Y_AC[3] = 16'h0004; Y_AC_code_length[3] = 3;  Y_AC_run_code[8'h03] = 3;   // (0,3)
+        Y_AC[4] = 16'h000B; Y_AC_code_length[4] = 4;  Y_AC_run_code[8'h04] = 4;   // (0,4)
+        Y_AC[5] = 16'h001A; Y_AC_code_length[5] = 5;  Y_AC_run_code[8'h05] = 5;   // (0,5)
+        Y_AC[6] = 16'h0078; Y_AC_code_length[6] = 7;  Y_AC_run_code[8'h06] = 6;   // (0,6)
+        Y_AC[7] = 16'h00F8; Y_AC_code_length[7] = 8;  Y_AC_run_code[8'h07] = 7;   // (0,7)
+        Y_AC[8] = 16'h03F6; Y_AC_code_length[8] = 10; Y_AC_run_code[8'h08] = 8;   // (0,8)
+        Y_AC[9] = 16'hFF82; Y_AC_code_length[9] = 16; Y_AC_run_code[8'h09] = 9;   // (0,9)
+        Y_AC[10] = 16'hFF83; Y_AC_code_length[10] = 16; Y_AC_run_code[8'h0A] = 10; // (0,A)
+        Y_AC[11] = 16'h0005; Y_AC_code_length[11] = 4;  Y_AC_run_code[8'h11] = 11; // (1,1)
+        Y_AC[12] = 16'h0038; Y_AC_code_length[12] = 6;  Y_AC_run_code[8'h12] = 12; // (1,2)
+        Y_AC[13] = 16'h00F9; Y_AC_code_length[13] = 8;  Y_AC_run_code[8'h13] = 13; // (1,3)
+        Y_AC[14] = 16'h03F7; Y_AC_code_length[14] = 10; Y_AC_run_code[8'h14] = 14; // (1,4)
+        Y_AC[15] = 16'hFF84; Y_AC_code_length[15] = 16; Y_AC_run_code[8'h15] = 15; // (1,5)
+        Y_AC[16] = 16'h0039; Y_AC_code_length[16] = 6;  Y_AC_run_code[8'h21] = 16; // (2,1)
+        Y_AC[17] = 16'h00FA; Y_AC_code_length[17] = 8;  Y_AC_run_code[8'h22] = 17; // (2,2)
+        Y_AC[18] = 16'h07F6; Y_AC_code_length[18] = 11; Y_AC_run_code[8'h23] = 18; // (2,3)
+        Y_AC[19] = 16'h003A; Y_AC_code_length[19] = 6;  Y_AC_run_code[8'h31] = 19; // (3,1)
+        Y_AC[20] = 16'h01F6; Y_AC_code_length[20] = 9;  Y_AC_run_code[8'h32] = 20; // (3,2)
+        Y_AC[21] = 16'h003B; Y_AC_code_length[21] = 6;  Y_AC_run_code[8'h41] = 21; // (4,1)
+        Y_AC[22] = 16'h0079; Y_AC_code_length[22] = 7;  Y_AC_run_code[8'h51] = 22; // (5,1)
+        Y_AC[23] = 16'h01F7; Y_AC_code_length[23] = 9;  Y_AC_run_code[8'hF0] = 23; // ZRL (15,0)
+        // Initialize remaining entries to safe values
+        for (i = 24; i < 162; i = i + 1) begin
+            Y_AC[i] = 16'h000A;
+            Y_AC_code_length[i] = 4;
+        end
     end
 
     // -------------------------------------------------------------------------
@@ -123,13 +143,50 @@ module y_huff(
     reg [11:0] dc_prev;
     reg active;
 
+    // Edge detection for enable signal
+    reg enable_prev;
+    wire enable_posedge = enable && !enable_prev;
+
+    always @(posedge clk) begin
+        if (rst)
+            enable_prev <= 0;
+        else
+            enable_prev <= enable;
+    end
+
+    // FIFO to buffer incoming blocks (depth = 64 for better throughput)
+    reg [11:0] fifo_mem [0:63][0:63]; // 64 blocks, each 64 coefficients
+    reg [5:0] fifo_wr_ptr;
+    reg [5:0] fifo_rd_ptr;
+    wire [5:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
+    wire fifo_empty = (fifo_count == 0);
+    wire fifo_full = (fifo_count == 63);
+
+    integer j;
+
+    // Write to FIFO when enable posedge detected
+    always @(posedge clk) begin
+        if (rst) begin
+            fifo_wr_ptr <= 0;
+        end
+        else if (enable_posedge && !fifo_full) begin
+            for (j = 0; j < 64; j = j + 1) begin
+                fifo_mem[fifo_wr_ptr][j] <= zz[j];
+            end
+            fifo_wr_ptr <= fifo_wr_ptr + 1;
+        end
+    end
+
+    // Buffer to hold current block being processed
+    reg [11:0] zz_buf [0:63];
+
     // Các biến dùng cho Bitstream Packer
     reg [27:0] push_data;
     reg [4:0]  push_len;
     reg push_valid;
-    
-    // Vì zz giờ đã là 12 bit, ta chỉ việc gán thẳng vào curr_val
-    wire [11:0] curr_val = zz[count]; 
+
+    // Read from buffered data instead of direct input
+    wire [11:0] curr_val = zz_buf[count];
     wire [11:0] diff_val = curr_val - dc_prev;
 
     always @(posedge clk) begin
@@ -141,15 +198,29 @@ module y_huff(
             push_valid <= 0;
             end_of_block_output <= 0;
             end_of_block_empty <= 0;
-        end 
-        else if (enable) begin
+            fifo_rd_ptr <= 0;
+        end
+        else if (!active && !fifo_empty) begin
+            // Start processing next block from FIFO
+            for (j = 0; j < 64; j = j + 1) begin
+                zz_buf[j] <= fifo_mem[fifo_rd_ptr][j];
+            end
+            fifo_rd_ptr <= fifo_rd_ptr + 1;
+
+            // Calculate last_nz_idx from the block being loaded
+            last_nz_idx <= 0;
+            for (i = 63; i >= 1; i = i - 1) begin
+                if (fifo_mem[fifo_rd_ptr][i] != 0 && last_nz_idx == 0)
+                    last_nz_idx <= i;
+            end
+
             count <= 0;
             active <= 1;
             zrl <= 0;
             push_valid <= 0;
             end_of_block_output <= 0;
-            end_of_block_empty <= (last_nz_idx == 0);
-        end 
+            end_of_block_empty <= 0; // Will be updated based on calculated last_nz_idx
+        end
         else if (active) begin
             push_valid <= 0; // Mặc định không push
             
