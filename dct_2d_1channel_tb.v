@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module y_dct_tb;
+module dct_2d_1channel_tb;
 
     // --- Tín hiệu điều khiển ---
     reg clk;
@@ -15,14 +15,14 @@ module y_dct_tb;
     // --- Khởi tạo Module y_dct ---
     dct_2d_1channel uut (
         .clk(clk), .rst(rst), .enable(enable), .data_in(data_in), .output_enable(output_enable),
-        .out00(out[0][0]), .out01(out[0][1]), .out02(out[0][2]), .out03(out[0][3]), .out04(out[0][4]), .out05(out[0][5]), .out06(out[0][6]), .out07(out[0][7]),
-        .out10(out[1][0]), .out11(out[1][1]), .out12(out[1][2]), .out13(out[1][3]), .out14(out[1][4]), .out15(out[1][5]), .out16(out[1][6]), .out17(out[1][7]),
-        .out20(out[2][0]), .out21(out[2][1]), .out22(out[2][2]), .out23(out[2][3]), .out24(out[2][4]), .out25(out[2][5]), .out26(out[2][6]), .out27(out[2][7]),
-        .out30(out[3][0]), .out31(out[3][1]), .out32(out[3][2]), .out33(out[3][3]), .out34(out[3][4]), .out35(out[3][5]), .out36(out[3][6]), .out37(out[3][7]),
-        .out40(out[4][0]), .out41(out[4][1]), .out42(out[4][2]), .out43(out[4][3]), .out44(out[4][4]), .out45(out[4][5]), .out46(out[4][6]), .out47(out[4][7]),
-        .out50(out[5][0]), .out51(out[5][1]), .out52(out[5][2]), .out53(out[5][3]), .out54(out[5][4]), .out55(out[5][5]), .out56(out[5][6]), .out57(out[5][7]),
-        .out60(out[6][0]), .out61(out[6][1]), .out62(out[6][2]), .out63(out[6][3]), .out64(out[6][4]), .out65(out[6][5]), .out66(out[6][6]), .out67(out[6][7]),
-        .out70(out[7][0]), .out71(out[7][1]), .out72(out[7][2]), .out73(out[7][3]), .out74(out[7][4]), .out75(out[7][5]), .out76(out[7][6]), .out77(out[7][7])
+        .Z00_final(out[0][0]), .Z01_final(out[0][1]), .Z02_final(out[0][2]), .Z03_final(out[0][3]), .Z04_final(out[0][4]), .Z05_final(out[0][5]), .Z06_final(out[0][6]), .Z07_final(out[0][7]),
+        .Z10_final(out[1][0]), .Z11_final(out[1][1]), .Z12_final(out[1][2]), .Z13_final(out[1][3]), .Z14_final(out[1][4]), .Z15_final(out[1][5]), .Z16_final(out[1][6]), .Z17_final(out[1][7]),
+        .Z20_final(out[2][0]), .Z21_final(out[2][1]), .Z22_final(out[2][2]), .Z23_final(out[2][3]), .Z24_final(out[2][4]), .Z25_final(out[2][5]), .Z26_final(out[2][6]), .Z27_final(out[2][7]),
+        .Z30_final(out[3][0]), .Z31_final(out[3][1]), .Z32_final(out[3][2]), .Z33_final(out[3][3]), .Z34_final(out[3][4]), .Z35_final(out[3][5]), .Z36_final(out[3][6]), .Z37_final(out[3][7]),
+        .Z40_final(out[4][0]), .Z41_final(out[4][1]), .Z42_final(out[4][2]), .Z43_final(out[4][3]), .Z44_final(out[4][4]), .Z45_final(out[4][5]), .Z46_final(out[4][6]), .Z47_final(out[4][7]),
+        .Z50_final(out[5][0]), .Z51_final(out[5][1]), .Z52_final(out[5][2]), .Z53_final(out[5][3]), .Z54_final(out[5][4]), .Z55_final(out[5][5]), .Z56_final(out[5][6]), .Z57_final(out[5][7]),
+        .Z60_final(out[6][0]), .Z61_final(out[6][1]), .Z62_final(out[6][2]), .Z63_final(out[6][3]), .Z64_final(out[6][4]), .Z65_final(out[6][5]), .Z66_final(out[6][6]), .Z67_final(out[6][7]),
+        .Z70_final(out[7][0]), .Z71_final(out[7][1]), .Z72_final(out[7][2]), .Z73_final(out[7][3]), .Z74_final(out[7][4]), .Z75_final(out[7][5]), .Z76_final(out[7][6]), .Z77_final(out[7][7])
     );
 
     // --- Tạo xung Clock (100MHz) ---
@@ -58,7 +58,7 @@ module y_dct_tb;
         input integer block_id;
         integer r, c;
         begin
-            $display(">>> BẮT ĐẦU NẠP BLOCK %0d <<<", block_id);
+            $display(">>> Fetching BLOCK %0d <<<", block_id);
             
             for (r = 0; r < 8; r = r + 1) begin
                 for (c = 0; c < 8; c = c + 1) begin
@@ -77,7 +77,7 @@ module y_dct_tb;
             @(posedge output_enable);
             
             #10; // Đợi thêm 1 chút cho tín hiệu ổn định trên Waveform
-            $display("✅ Hoàn thành tính toán Block %0d. Kết quả:", block_id);
+            $display("Completed DCT Function for 1 Block %0d. Result:", block_id);
             print_output();
             
             // Thời gian nghỉ tĩnh giữa 2 block dữ liệu liên tiếp
@@ -129,7 +129,7 @@ module y_dct_tb;
         run_dct_block(2);
         run_dct_block(3);
 
-        $display("🚀 MÔ PHỎNG HOÀN TẤT TOÀN BỘ!");
+        $display("Simulation Completed!");
         #100;
         $finish;
     end

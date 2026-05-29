@@ -114,11 +114,10 @@ module compute_1d_dct #(
             end else begin
                 delay <= 1'b0;
             end
-            
-            out_enable <= delay; // out_enable nháy lên đúng 1 xung clock
 
             // 3. Logic Làm tròn và Dịch bit (Shifting & Rounding)
             if (delay) begin 
+                out_enable <= delay;
                 dct_out_0 <= dct_temp_sum[0][13] ? dct_temp_sum[0][26:14] + 1 : dct_temp_sum[0][26:14];
                 dct_out_1 <= dct_temp_sum[1][13] ? dct_temp_sum[1][26:14] + 1 : dct_temp_sum[1][26:14];
                 dct_out_2 <= dct_temp_sum[2][13] ? dct_temp_sum[2][26:14] + 1 : dct_temp_sum[2][26:14];
@@ -127,6 +126,8 @@ module compute_1d_dct #(
                 dct_out_5 <= dct_temp_sum[5][13] ? dct_temp_sum[5][26:14] + 1 : dct_temp_sum[5][26:14];
                 dct_out_6 <= dct_temp_sum[6][13] ? dct_temp_sum[6][26:14] + 1 : dct_temp_sum[6][26:14];
                 dct_out_7 <= dct_temp_sum[7][13] ? dct_temp_sum[7][26:14] + 1 : dct_temp_sum[7][26:14];
+            end else begin  
+                out_enable <= 1'b0;
             end
         end
     end
