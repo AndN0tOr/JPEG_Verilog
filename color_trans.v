@@ -22,7 +22,7 @@ module color_trans (
 
     wire [7:0] Cr1 = 8'd128;
     wire [7:0] Cr2 = 8'd107;
-    wire [7:0] Cr3 = 8'd23;
+    wire [7:0] Cr3 = 8'd21;
 
     reg [15:0] Y_temp, Cb_temp, Cr_temp;
 
@@ -58,20 +58,24 @@ module color_trans (
             Cb_temp <= 0;
             Cr_temp <= 0;
         end
-    else if (enable) begin
-        Y1_product <= Y1 * r[7:0];
-        Y2_product <= Y2 * g[7:0];
-        Y3_product <= Y3 * b[7:0];
-        Cb1_product <= Cb1 * r[7:0];
-        Cb2_product <= Cb2 * g[7:0];
-        Cb3_product <= Cb3 * b[7:0];
-        Cr1_product <= Cr1 * r[7:0];
-        Cr2_product <= Cr2 * g[7:0];
-        Cr3_product <= Cr3 * b[7:0];
-        Y_temp <= Y1_product + Y2_product + Y3_product;
-        Cb_temp <= 16'd32768 - Cb1_product - Cb2_product + Cb3_product;
-        Cr_temp <= 16'd32768 + Cr1_product - Cr2_product - Cr3_product;
-    end
+        else begin
+            if (enable) begin
+                Y1_product <= Y1 * r[7:0];
+                Y2_product <= Y2 * g[7:0];
+                Y3_product <= Y3 * b[7:0];
+                Cb1_product <= Cb1 * r[7:0];
+                Cb2_product <= Cb2 * g[7:0];
+                Cb3_product <= Cb3 * b[7:0];
+                Cr1_product <= Cr1 * r[7:0];
+                Cr2_product <= Cr2 * g[7:0];
+                Cr3_product <= Cr3 * b[7:0];
+            end
+            if (en_1) begin
+                Y_temp <= Y1_product + Y2_product + Y3_product;
+                Cb_temp <= 16'd32768 - Cb1_product - Cb2_product + Cb3_product;
+                Cr_temp <= 16'd32768 + Cr1_product - Cr2_product - Cr3_product;
+            end
+        end
     end
     always @(posedge clk)
     begin
@@ -80,7 +84,7 @@ module color_trans (
             Cb <=0;
             Cr <= 0;
         end
-        else if (enable) begin
+        else if (en_2) begin
             Y <= (Y_temp[7] && Y_temp[15:8] != 8'd255) ?  Y_temp[15:8] + 1'b1 : Y_temp[15:8];
             Cb <= (Cb_temp[7] && Cb_temp[15:8] != 8'd255) ? Cb_temp[15:8] + 1'b1 : Cb_temp[15:8];
             Cr <= (Cr_temp[7] && Cr_temp[15:8] != 8'd255) ? Cr_temp[15:8] + 1'b1 : Cr_temp[15:8];

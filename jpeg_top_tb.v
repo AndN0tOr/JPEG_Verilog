@@ -96,7 +96,15 @@ module jpeg_top_tb();
         $fclose(file_in);
         $fclose(file_out);
         $display("Simulation completed. Total outputs: %0d", data_count);
+        $display("Total completed Y blocks: %0d (Expected: 4320)", y_block_count);
         $stop;
+    end
+
+    integer y_block_count = 0;
+    always @(posedge clk) begin
+        if (uut.u19.end_of_block_output) begin
+            y_block_count = y_block_count + 1;
+        end
     end
 
     always @(posedge clk) begin

@@ -129,6 +129,9 @@ module dct_2d_1channel (
 
     // --- Instances 1D DCT ---
     
+    // JPEG Level Shift: Subtract 128 from input (shift from [0,255] to [-128,127])
+    wire [7:0] data_in_shifted = data_in - 8'd128;
+
     // Instance 1: Xử lý Hàng
     compute_1d_dct #(
         .IN_WIDTH(8)
@@ -136,7 +139,7 @@ module dct_2d_1channel (
         .rst(rst),
         .clk(clk),
         .enable(enable),      
-        .data_in(data_in),    
+        .data_in(data_in_shifted),    
         .index(index_in_row), 
         .out_enable(dct_row_out_enable),
         .dct_out_0(dct_1d_row[0]), .dct_out_1(dct_1d_row[1]), 

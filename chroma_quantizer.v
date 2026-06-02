@@ -98,7 +98,7 @@ generate
             end else begin
                 // Stage 0: Mở rộng bit dấu của Z
                 if (enable)
-                    Z_ext[i] <= $signed({Z_in[i][10], Z_in[i]});
+                    Z_ext[i] <= $signed({Z_in[i][11], Z_in[i]});
                 
                 // Stage 1: Nhân với QM (chú ý thêm 1'b0 để đảm bảo QM là dương)
                 if (enable_1)
@@ -108,9 +108,12 @@ generate
                 if (enable_2)
                     Z_del[i] <= Z_temp[i];
                 
-                // Stage 3: Cắt bit để chia 4096 (>> 12) và làm tròn số âm
+                // Stage 3: Cắt bit để chia 4096 (>> 12) và làm tròn
+                // Round half away from zero:
+                //   - Dương (Z_del[23]=0): nếu bit[11]=1 (frac >= 0.5) thì round up (+1)
+                //   - Âm  (Z_del[23]=1): Z_del[23:12] đã là floor (round away from zero)
                 if (enable_3)
-                    Q_out[i] <= Z_del[i][11] ? (Z_del[i][23:12] + 1'b1) : Z_del[i][23:12];
+                    Q_out[i] <= (!Z_del[i][23] && Z_del[i][11]) ? Z_del[i][23:12] + 1'b1 : Z_del[i][23:12];
             end
         end
     end

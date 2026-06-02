@@ -9,11 +9,42 @@ def build_jpeg_header(width, height):
     header = b'\xFF\xD8'
     header += b'\xFF\xE0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00'
     
-    # 2. DQT (Bảng lượng tử hóa)
-    # Luma (Y) - Mặc định theo Verilog của bạn là chia cho 1
-    dqt_luma = b'\xFF\xDB\x00\x43\x00' + bytes([1] * 64)
-    # Chroma (Cb/Cr) - Mặc định chia cho 1
-    dqt_chroma = b'\xFF\xDB\x00\x43\x01' + bytes([1] * 64)
+    # 2. DQT (Bảng lượng tử hóa cho Quality = 50)
+    # Luma (Y)
+    luma_tb = [
+        16, 11, 10, 16, 24, 40, 51, 61,
+        12, 12, 14, 19, 26, 58, 60, 55,
+        14, 13, 16, 24, 40, 57, 69, 56,
+        14, 17, 22, 29, 51, 87, 80, 62,
+        18, 22, 37, 56, 68, 109, 103, 77,
+        24, 35, 55, 64, 81, 104, 113, 92,
+        49, 64, 78, 87, 103, 121, 120, 101,
+        72, 92, 95, 98, 112, 100, 103, 99
+    ]
+    # Chroma (Cb/Cr)
+    chroma_tb = [
+        17, 18, 24, 47, 99, 99, 99, 99,
+        18, 21, 26, 47, 99, 99, 99, 99,
+        24, 26, 56, 99, 99, 99, 99, 99,
+        47, 66, 99, 99, 99, 99, 99, 99,
+        99, 99, 99, 99, 99, 99, 99, 99,
+        99, 99, 99, 99, 99, 99, 99, 99,
+        99, 99, 99, 99, 99, 99, 99, 99,
+        99, 99, 99, 99, 99, 99, 99, 99
+    ]
+    # Thứ tự quét zigzag trong JPEG
+    zigzag_indices = [
+         0,  1,  8, 16,  9,  2,  3, 10,
+        17, 24, 32, 25, 18, 11,  4,  5,
+        12, 19, 26, 33, 40, 48, 41, 34,
+        27, 20, 13,  6,  7, 14, 21, 28,
+        35, 42, 49, 56, 57, 50, 43, 36,
+        29, 22, 15, 23, 30, 37, 44, 51,
+        58, 59, 52, 45, 38, 31, 39, 46,
+        53, 60, 61, 54, 47, 55, 62, 63
+    ]
+    dqt_luma = b'\xFF\xDB\x00\x43\x00' + bytes([luma_tb[i] for i in zigzag_indices])
+    dqt_chroma = b'\xFF\xDB\x00\x43\x01' + bytes([chroma_tb[i] for i in zigzag_indices])
     header += dqt_luma + dqt_chroma
     
     # 3. SOF0 (Start of Frame) - Cấu hình ảnh Baseline
@@ -55,8 +86,8 @@ def byte_stuff_jpeg(data):
             result.append(0x00)
     return bytes(result)
 
-def compile_jpeg(hex_file, output_jpg, width, height, endianness='big'):
-    """Doc raw data tu Verilog, boc Header va xuat file anh"""
+def compile_jpeg(hex_file, output_jpg, width, height):
+    """Doc raw data tu Verilog, boc Header va xuat file anh (Big-endian)"""
     if not os.path.exists(hex_file):
         print(f"Loi: Khong tim thay file {hex_file}")
         return
@@ -64,12 +95,16 @@ def compile_jpeg(hex_file, output_jpg, width, height, endianness='big'):
     raw_hex_str = ""
     with open(hex_file, 'r') as f:
         for line in f:
+            # Xử lý riêng dòng EOF_PARTIAL
+            if "EOF_PARTIAL:" in line:
+                # Ví dụ: // EOF_PARTIAL: F1234567 (Valid bits: 12)
+                hex_val = line.split("EOF_PARTIAL:")[1].strip().split()[0]
+                raw_hex_str += hex_val
+                continue
+                
             cleaned = line.strip().replace("0x", "").replace(",", "")
             if "//" in cleaned: cleaned = cleaned.split("//")[0].strip()
             if not cleaned: continue
-
-            if endianness == 'little' and len(cleaned) == 8:
-                cleaned = cleaned[6:8] + cleaned[4:6] + cleaned[2:4] + cleaned[0:2]
             raw_hex_str += cleaned
 
     if len(raw_hex_str) % 2 != 0: raw_hex_str += "0"
@@ -77,16 +112,11 @@ def compile_jpeg(hex_file, output_jpg, width, height, endianness='big'):
     # Lấy Raw entropy data
     raw_data = binascii.unhexlify(raw_hex_str)
 
-    # QUAN TRONG: Kiem tra xem Verilog da byte-stuff chua
-    # Neu thay nhieu FF00 lien tiep thi da stuffed roi, khong can stuff lai
-    # Neu khong thi can byte stuffing
-    if raw_data.count(b'\xff\x00') < len(raw_data) // 20:
-        # Chua byte-stuffed, can them
-        raw_data = byte_stuff_jpeg(raw_data)
-        print("[Info] Da them byte stuffing")
-    else:
-        print("[Info] Data da co byte stuffing tu Verilog")
-    
+    # QUAN TRONG: Mạch ff_checker.v của bạn ĐÃ thực hiện byte stuffing bằng phần cứng.
+    # Việc thực hiện byte stuffing thêm một lần nữa ở đây sẽ làm hỏng dữ liệu
+    # (VD: FF 00 -> FF 00 00), do đó phải loại bỏ hoàn toàn tính năng này ở Python.
+    print("[Info] Bo qua byte stuffing o Python vi mach phan cung da xu ly.")
+
     # Lay Header
     header = build_jpeg_header(width, height)
 
@@ -95,7 +125,7 @@ def compile_jpeg(hex_file, output_jpg, width, height, endianness='big'):
 
     # Gop toan bo
     final_jpeg = header + raw_data + eoi
-    
+
     with open(output_jpg, 'wb') as out_f:
         out_f.write(final_jpeg)
 
@@ -106,12 +136,7 @@ def compile_jpeg(hex_file, output_jpg, width, height, endianness='big'):
 if __name__ == "__main__":
     # BAN CAN THAY DOI CHIEU RONG/CAO CUA ANH DUNG VOI FILE GOC (sample1.bmp)
     IMAGE_WIDTH = 640
-    IMAGE_HEIGHT = 426
+    IMAGE_HEIGHT = 432
 
-    # Thu voi big-endian (mac dinh)
-    print("\n=== Thu voi big-endian ===")
-    compile_jpeg("output_bitstream.hex", "output_big.jpg", IMAGE_WIDTH, IMAGE_HEIGHT, endianness='big')
-
-    # Thu voi little-endian
-    print("\n=== Thu voi little-endian ===")
-    compile_jpeg("output_bitstream.hex", "output_little.jpg", IMAGE_WIDTH, IMAGE_HEIGHT, endianness='little')
+    # Tao file JPEG voi big-endian
+    compile_jpeg("output_bitstream.hex", "output.jpg", IMAGE_WIDTH, IMAGE_HEIGHT)

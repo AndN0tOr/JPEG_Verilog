@@ -12,7 +12,7 @@ module color_trans_tb;
         .out_enable(out_enable), 
         .data_out(data_out)
         );
-    always #5 clk = ~clk;
+    always #5 clk = ~clk; 
 
     initial begin
         clk = 0;
