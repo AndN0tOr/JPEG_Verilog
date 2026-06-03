@@ -3,16 +3,17 @@
 module y_dqh(clk, rst, enable, data_in,
 JPEG_bitstream, 
   data_ready, y_orc, end_of_block_output,
-   end_of_block_empty);
+   end_of_block_empty, is_last_chunk);
 input		clk;
 input		rst;
 input		enable;
 input	[7:0]	data_in;
 output  [31:0]  JPEG_bitstream;
 output		data_ready;
-output [4:0] y_orc;
+output [5:0] y_orc;
 output	end_of_block_output;
 output	end_of_block_empty;
+output is_last_chunk;
 
 
 wire	dct_enable, quantizer_enable;
@@ -99,7 +100,7 @@ wire [11:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88;
 	.Y71(Q71), .Y72(Q72), .Y73(Q73), .Y74(Q74), .Y75(Q75), .Y76(Q76), .Y77(Q77), .Y78(Q78), 
 	.Y81(Q81), .Y82(Q82), .Y83(Q83), .Y84(Q84), .Y85(Q85), .Y86(Q86), .Y87(Q87), .Y88(Q88),
 	.JPEG_bitstream(JPEG_bitstream), .data_ready(data_ready), .output_reg_count(y_orc),
-	.end_of_block_output(end_of_block_output),
-	.end_of_block_empty(end_of_block_empty));	
+	.end_of_block_output(end_of_block_output),.end_of_block_empty(end_of_block_empty),
+    .is_last_chunk(is_last_chunk));
 
 	endmodule

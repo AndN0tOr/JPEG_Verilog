@@ -110,10 +110,8 @@ generate
                 
                 // Stage 3: Cắt bit để chia 4096 (>> 12) và làm tròn
                 // Round half away from zero:
-                //   - Dương (Z_del[23]=0): nếu bit[11]=1 (frac >= 0.5) thì round up (+1)
-                //   - Âm  (Z_del[23]=1): Z_del[23:12] đã là floor (round away from zero)
                 if (enable_3)
-                    Q_out[i] <= (!Z_del[i][23] && Z_del[i][11]) ? Z_del[i][23:12] + 1'b1 : Z_del[i][23:12];
+                    Q_out[i] <= Z_del[i][23:12] + Z_del[i][11];
             end
         end
     end

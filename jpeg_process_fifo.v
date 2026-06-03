@@ -12,10 +12,11 @@ module jpeg_process_fifo(
     // 1. MODULE INSTANTIATION & WIRES
     // -------------------------------------------------------------------------
     wire [31:0] cb_JPEG_bitstream, cr_JPEG_bitstream, y_JPEG_bitstream;
-    wire [4:0]  cr_orc, cb_orc, y_orc;
+    wire [5:0]  cr_orc, cb_orc, y_orc;
     wire        cb_data_ready, cr_data_ready, y_data_ready;
     wire        end_of_block_output, y_eob_empty; 
     wire        cb_eob_empty, cr_eob_empty;
+    wire        y_is_last_chunk, cb_is_last_chunk, cr_is_last_chunk;
 
     jpeg_process jpeg_process_inst(
         .clk(clk), .rst(rst), .enable(enable), .data_in(data_in),
@@ -23,57 +24,67 @@ module jpeg_process_fifo(
         .cb_JPEG_bitstream(cb_JPEG_bitstream), .cb_data_ready(cb_data_ready), .cb_orc(cb_orc), 
         .y_JPEG_bitstream(y_JPEG_bitstream),   .y_data_ready(y_data_ready),   .y_orc(y_orc), 
         .y_eob_output(end_of_block_output),    .y_eob_empty(y_eob_empty), 
-        .cb_eob_empty(cb_eob_empty),           .cr_eob_empty(cr_eob_empty)
+        .cb_eob_empty(cb_eob_empty),           .cr_eob_empty(cr_eob_empty),
+        .y_is_last_chunk(y_is_last_chunk),     .cb_is_last_chunk(cb_is_last_chunk), .cr_is_last_chunk(cr_is_last_chunk)
     );
 
     // -------------------------------------------------------------------------
-    // 2. FIFOs (WIDTH = 37 BITS)
+    // 2. FWFT FIFOs (WIDTH = 39 BITS)
     // -------------------------------------------------------------------------
-    wire [36:0] y_bits_out_37, cb_bits_out_37, cr_bits_out_37;
+    wire [38:0] y_bits_out_39, cb_bits_out_39, cr_bits_out_39;
     wire        y_fifo_empty, cb_fifo_empty, cr_fifo_empty;
     wire        y_out_enable, cb_out_enable, cr_out_enable;
     
     wire cb_read_req, cr_read_req, y_read_req;
 
-    sync_fifo_32 y_fifo(
+    sync_fifo_39 y_fifo(
         .clk(clk), .rst(rst), .read_req(y_read_req), 
-        .write_data({y_orc, y_JPEG_bitstream}), .write_enable(y_data_ready), 
-        .read_data(y_bits_out_37), .fifo_empty(y_fifo_empty), .rdata_valid(y_out_enable)
+        .write_data({y_is_last_chunk, y_orc, y_JPEG_bitstream}), .write_enable(y_data_ready), 
+        .read_data(y_bits_out_39), .fifo_empty(y_fifo_empty), .rdata_valid(y_out_enable), .fifo_full()
     );
     
-    sync_fifo_32 cb_fifo(
+    sync_fifo_39 cb_fifo(
         .clk(clk), .rst(rst), .read_req(cb_read_req), 
-        .write_data({cb_orc, cb_JPEG_bitstream}), .write_enable(cb_data_ready), 
-        .read_data(cb_bits_out_37), .fifo_empty(cb_fifo_empty), .rdata_valid(cb_out_enable)
+        .write_data({cb_is_last_chunk, cb_orc, cb_JPEG_bitstream}), .write_enable(cb_data_ready), 
+        .read_data(cb_bits_out_39), .fifo_empty(cb_fifo_empty), .rdata_valid(cb_out_enable), .fifo_full()
     );
     
-    sync_fifo_32 cr_fifo(
+    sync_fifo_39 cr_fifo(
         .clk(clk), .rst(rst), .read_req(cr_read_req), 
-        .write_data({cr_orc, cr_JPEG_bitstream}), .write_enable(cr_data_ready), 
-        .read_data(cr_bits_out_37), .fifo_empty(cr_fifo_empty), .rdata_valid(cr_out_enable)
+        .write_data({cr_is_last_chunk, cr_orc, cr_JPEG_bitstream}), .write_enable(cr_data_ready), 
+        .read_data(cr_bits_out_39), .fifo_empty(cr_fifo_empty), .rdata_valid(cr_out_enable), .fifo_full()
     );
 
     // -------------------------------------------------------------------------
-    // 3. FSM FOR READING FIFOS SEQUENTIALLY
+    // 3. FSM FOR READING FIFOS SEQUENTIALLY (FWFT Logic)
     // -------------------------------------------------------------------------
     reg [1:0] state; // 0: Idle/Y, 1: Cb, 2: Cr
     
-    reg [35:1] en;
-    always @(posedge clk) begin
-        if (rst) en <= 0;
-        else en <= {en[34:1], end_of_block_output};
-    end
-    
+    wire current_empty = (state == 2'd0) ? y_fifo_empty : 
+                         (state == 2'd1) ? cb_fifo_empty : cr_fifo_empty;
+                         
+    wire [38:0] current_data_39 = (state == 2'd0) ? y_bits_out_39 : 
+                                  (state == 2'd1) ? cb_bits_out_39 : cr_bits_out_39;
+                                  
+    wire current_is_last_chunk = current_data_39[38];
+    wire [5:0]  current_orc    = current_data_39[37:32];
+    wire [31:0] current_bits   = current_data_39[31:0];
+
+    // Request to pop if we have data
+    wire pop_req = !current_empty;
+
+    assign y_read_req  = pop_req && (state == 2'd0);
+    assign cb_read_req = pop_req && (state == 2'd1);
+    assign cr_read_req = pop_req && (state == 2'd2);
+
     always @(posedge clk) begin
         if (rst) state <= 2'd0;
-        else if (en[3])  state <= 2'd1; // Switch to Cb
-        else if (en[19]) state <= 2'd2; // Switch to Cr
-        else if (en[35]) state <= 2'd0; // Back to Y
+        else if (pop_req && current_is_last_chunk) begin
+            if (state == 2'd0) state <= 2'd1;
+            else if (state == 2'd1) state <= 2'd2;
+            else if (state == 2'd2) state <= 2'd0;
+        end
     end
-    
-    assign y_read_req  = (!y_fifo_empty  && state == 2'd0);
-    assign cb_read_req = (!cb_fifo_empty && state == 2'd1);
-    assign cr_read_req = (!cr_fifo_empty && state == 2'd2);
 
     // -------------------------------------------------------------------------
     // 4. 64-BIT ACCUMULATOR (THE BIT PACKER)
@@ -81,20 +92,13 @@ module jpeg_process_fifo(
     reg [63:0] bit_buffer;
     reg [6:0]  bit_count;
     
-    wire        current_out_enable = (state == 2'd0) ? y_out_enable : 
-                                     (state == 2'd1) ? cb_out_enable : cr_out_enable;
-                                     
-    wire [36:0] current_data_37    = (state == 2'd0) ? y_bits_out_37 : 
-                                     (state == 2'd1) ? cb_bits_out_37 : cr_bits_out_37;
-                                     
-    wire [4:0]  current_orc        = current_data_37[36:32];
-    wire [31:0] current_bits       = current_data_37[31:0];
-    
-    // valid_bits is 32 if orc == 0, otherwise orc
-    wire [5:0]  valid_bits = (current_orc == 0) ? 6'd32 : {1'b0, current_orc};
+    // valid_bits is directly equal to orc! (0 to 32)
+    wire [5:0]  valid_bits = current_orc;
     
     // Convert left-aligned with 1s padding to right-aligned
-    wire [31:0] valid_data = current_bits >> (6'd32 - valid_bits);
+    // Example: if valid_bits = 0, current_bits >> 32 -> 0.
+    // If valid_bits = 32, current_bits >> 0 -> current_bits.
+    wire [31:0] valid_data = (valid_bits == 0) ? 32'd0 : (current_bits >> (6'd32 - valid_bits));
     
     wire [63:0] temp_buffer = (bit_buffer << valid_bits) | valid_data;
     wire [6:0]  temp_count  = bit_count + valid_bits;
@@ -115,7 +119,7 @@ module jpeg_process_fifo(
             data_ready <= 0;
             orc_reg <= 0; // We always output full 32-bit words
             
-            if (current_out_enable) begin
+            if (pop_req) begin
                 if (temp_count >= 32) begin
                     JPEG_bitstream <= out_word;
                     data_ready <= 1;

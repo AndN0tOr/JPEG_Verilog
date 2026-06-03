@@ -111,10 +111,8 @@ generate
                 // Stage 3: Chia cho 4096 (lấy bit [23:12]) và làm tròn
                 // Round half away from zero:
                 //   - Dương (Z_del[23]=0): nếu bit[11]=1 (frac >= 0.5) thì round up (+1)
-                //   - Âm  (Z_del[23]=1): Z_del[23:12] từ arithmetic shift đã là floor
-                //     (già round away from zero), không cộng thêm.
                 if (enable_3)
-                    Q_out[i] <= (!Z_del[i][23] && Z_del[i][11]) ? Z_del[i][23:12] + 1'b1 : Z_del[i][23:12];
+                    Q_out[i] <= Z_del[i][23:12] + Z_del[i][11];
             end
         end
     end

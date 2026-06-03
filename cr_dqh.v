@@ -5,9 +5,10 @@ module cr_dqh(
     input  [7:0]  data_in,
     output [31:0] JPEG_bitstream, 
     output        data_ready, 
-    output [4:0]  cr_orc,         // Đổi tên từ y_orc sang cr_orc
+    output [5:0]  cr_orc,         // Đổi tên từ y_orc sang cr_orc
     output        end_of_block_output,
-    output        end_of_block_empty
+    output        end_of_block_empty,
+    output        is_last_chunk
 );
 
     wire dct_enable, quantizer_enable;
@@ -82,8 +83,9 @@ module cr_dqh(
         .JPEG_bitstream(JPEG_bitstream), 
         .data_ready(data_ready), 
         .output_reg_count(cr_orc),
-        .end_of_block_output(),
-        .end_of_block_empty(end_of_block_empty)
+        .end_of_block_output(end_of_block_output),
+        .end_of_block_empty(end_of_block_empty),
+        .is_last_chunk(is_last_chunk)
     );	
 
 endmodule

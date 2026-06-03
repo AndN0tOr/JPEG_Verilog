@@ -15,9 +15,10 @@ module y_huff(
     // Output GIỮ NGUYÊN
     output reg [31:0] JPEG_bitstream, 
     output reg data_ready, 
-    output reg [4:0]  output_reg_count, 
+    output reg [5:0]  output_reg_count, 
     output reg end_of_block_output,
-    output reg end_of_block_empty
+    output reg end_of_block_empty,
+    output reg is_last_chunk
 );
 
     // -------------------------------------------------------------------------
@@ -290,13 +291,13 @@ module y_huff(
             enable_prev <= enable;
     end
 
-    // FIFO to buffer incoming blocks (depth = 64 for better throughput)
-    reg [11:0] fifo_mem [0:63][0:63]; // 64 blocks, each 64 coefficients
-    reg [5:0] fifo_wr_ptr;
-    reg [5:0] fifo_rd_ptr;
-    wire [5:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
+    // FIFO to buffer incoming blocks (depth = 128 for better throughput)
+    reg [11:0] fifo_mem [0:127][0:63]; // 128 blocks, each 64 coefficients
+    reg [6:0] fifo_wr_ptr;
+    reg [6:0] fifo_rd_ptr;
+    wire [6:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
     wire fifo_empty = (fifo_count == 0);
-    wire fifo_full = (fifo_count == 63);
+    wire fifo_full = (fifo_count == 127);
 
     integer j;
 
@@ -428,16 +429,19 @@ module y_huff(
         if (rst) begin
             bit_buffer <= 0;
             bit_cnt <= 0;
+            JPEG_bitstream <= 0;
             data_ready <= 0;
             output_reg_count <= 0;
-            JPEG_bitstream <= 0;
-            flushing <= 0;
             end_of_block_output <= 0;
+            flushing <= 0;
+            is_last_chunk <= 0;
+            eob_trigger <= 0;
         end
         else begin
             data_ready <= 0;
             output_reg_count <= 0;
             end_of_block_output <= 0;
+            is_last_chunk <= 0;
 
             if (eob_trigger) flushing <= 1;
 
@@ -447,7 +451,7 @@ module y_huff(
                 bit_cnt <= bit_cnt + push_len - 32;
                 JPEG_bitstream <= bit_buffer[bit_cnt - 1 -: 32];
                 data_ready <= 1;
-                output_reg_count <= 32;
+                output_reg_count <= 6'd32;
             end
             else if (push_valid) begin
                 // Chỉ push data mới
@@ -459,20 +463,24 @@ module y_huff(
                 JPEG_bitstream <= bit_buffer[bit_cnt - 1 -: 32];
                 bit_cnt <= bit_cnt - 32;
                 data_ready <= 1;
-                output_reg_count <= 32;
+                output_reg_count <= 6'd32;
             end
             else if (flushing && bit_cnt > 0) begin
                 // Xả các bit còn lại (padding 1) khi kết thúc block
                 JPEG_bitstream <= (bit_buffer[31:0] << (6'd32 - bit_cnt)) | ((32'hFFFF_FFFF) >> bit_cnt);
                 bit_cnt <= 0;
                 data_ready <= 1;
-                output_reg_count <= bit_cnt[4:0];
+                output_reg_count <= {1'b0, bit_cnt[4:0]};
                 flushing <= 0;
                 end_of_block_output <= 1;
+                is_last_chunk <= 1;
             end
             else if (flushing && bit_cnt == 0) begin
                 flushing <= 0;
                 end_of_block_output <= 1;
+                data_ready <= 1;
+                output_reg_count <= 6'd0;
+                is_last_chunk <= 1;
             end
         end
     end
