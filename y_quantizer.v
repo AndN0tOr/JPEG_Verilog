@@ -61,7 +61,7 @@ assign QM[56]=QQ8_1; assign QM[57]=QQ8_2; assign QM[58]=QQ8_3; assign QM[59]=QQ8
 // -----------------------------------------------------------------------------
 // 3. PIPELINE REGISTERS
 // -----------------------------------------------------------------------------
-reg signed [11:0] Z_ext  [0:63]; // Kéo dài dấu (Sign extend), 12 bit là đủ
+reg signed [11:0] Z_ext  [0:63]; // Sign-extended input (12-bit, same range as Z_in)
 reg signed [23:0] Z_temp [0:63]; // Stage 1: Phép nhân
 reg signed [23:0] Z_del  [0:63]; // Stage 2: Delay
 reg        [11:0] Q_out  [0:63]; // Stage 3: Làm tròn và xuất
@@ -98,7 +98,7 @@ generate
             end else begin
                 // Stage 0: Mở rộng bit dấu của Z (từ 11 bit -> 12 bit bù hai)
                 if (enable)
-                    Z_ext[i] <= $signed({Z_in[i][10], Z_in[i]});
+                    Z_ext[i] <= $signed({Z_in[i][11], Z_in[i]});
                 
                 // Stage 1: Nhân với QM. Định dạng {1'b0, QM[i]} ép QM thành số dương có dấu
                 if (enable_1)
@@ -108,9 +108,13 @@ generate
                 if (enable_2)
                     Z_del[i] <= Z_temp[i];
                 
-                // Stage 3: Chia cho 4096 (lấy bit [23:12] để giữ sign bit) và làm tròn
+                // Stage 3: Chia cho 4096 (lấy bit [23:12]) và làm tròn
+                // Round half away from zero:
+                //   - Dương (Z_del[23]=0): nếu bit[11]=1 (frac >= 0.5) thì round up (+1)
+                //   - Âm  (Z_del[23]=1): Z_del[23:12] từ arithmetic shift đã là floor
+                //     (già round away from zero), không cộng thêm.
                 if (enable_3)
-                    Q_out[i] <= Z_del[i][11] ? (Z_del[i][23:12] + 1'b1) : Z_del[i][23:12];
+                    Q_out[i] <= (!Z_del[i][23] && Z_del[i][11]) ? Z_del[i][23:12] + 1'b1 : Z_del[i][23:12];
             end
         end
     end

@@ -376,10 +376,13 @@ module chroma_huff(
                 count <= count + 1;
             end 
             else if (count > last_nz_idx) begin
-                // Đã duyệt hết các hệ số khác 0 -> Xuất mã End Of Block (EOB) = AC(0,0)
-                push_data <= C_AC[0];
-                push_len  <= C_AC_code_length[0];
-                push_valid <= 1;
+                // Đã duyệt hết các hệ số khác 0
+                if (last_nz_idx < 63) begin
+                    // Xuất mã End Of Block (EOB) = AC(0,0)
+                    push_data <= C_AC[0];
+                    push_len  <= C_AC_code_length[0];
+                    push_valid <= 1;
+                end
                 
                 active <= 0;
                 eob_trigger <= 1;
