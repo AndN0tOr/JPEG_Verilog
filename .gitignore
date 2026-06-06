@@ -1,5 +1,6 @@
 # EDA Tools & Simulation
 work/
+.claude/
 transcript
 *.wlf
 *.vcd
@@ -8,10 +9,16 @@ transcript
 *.log
 *.pb
 *.mif
+*.tcl
+*.log
+*.txt
 
 run -all
+
+DEBUG_REPORT.md
+LEVEL_SHIFT_FIX.md
 
 # Compiled objects
 *.o
 *.out
-work/_info
+
