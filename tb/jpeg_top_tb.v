@@ -18,6 +18,15 @@ module jpeg_top_tb();
     integer scan_status;
     integer data_count;
     integer wait_count;
+    integer pixel_count = 0;
+    integer expected_blocks = 0;
+    integer y_block_count = 0;
+
+    always @(posedge clk) begin
+        if (uut.u19.end_of_block_output) begin
+            y_block_count = y_block_count + 1;
+        end
+    end
 
     jpeg_top uut (
         .clk(clk),
@@ -64,20 +73,43 @@ module jpeg_top_tb();
 
             if (scan_status == 1) begin
                 enable = 1;
+                pixel_count = pixel_count + 1;
             end else begin
                 enable = 0;
             end
         end
 
+        expected_blocks = pixel_count / 64;
+
         @(posedge clk);
         enable = 0;
+        
+        $display("Input data finished. Total pixels read: %0d. Expected blocks: %0d", pixel_count, expected_blocks);
+        $display("Waiting for pipeline to process all blocks...");
+        
+        // Wait until all blocks are processed by y_huff
+        wait_count = 0;
+        while (y_block_count < expected_blocks && wait_count < 10000000) begin
+            @(posedge clk);
+            wait_count = wait_count + 1;
+        end
+        
+        if (y_block_count >= expected_blocks) begin
+            $display("All %0d blocks processed. Waiting for FIFOs to flush...", expected_blocks);
+        end else begin
+            $display("Timeout waiting for blocks. Only processed %0d blocks out of %0d", y_block_count, expected_blocks);
+        end
+        
+        // Wait additional time for FIFOs and output packer to flush
+        #20000; 
+
         end_of_file_signal = 1;
         @(posedge clk);
         end_of_file_signal = 0;
 
-        $display("Waiting for processing to complete...");
+        $display("Waiting for EOF bitstream packer to complete...");
         wait_count = 0;
-        while (wait_count < 100000000 && !eof_data_partial_ready) begin
+        while (wait_count < 10000000 && !eof_data_partial_ready) begin
             @(posedge clk);
             wait_count = wait_count + 1;
             if (wait_count % 10000000 == 0) begin
@@ -100,12 +132,7 @@ module jpeg_top_tb();
         $stop;
     end
 
-    integer y_block_count = 0;
-    always @(posedge clk) begin
-        if (uut.u19.end_of_block_output) begin
-            y_block_count = y_block_count + 1;
-        end
-    end
+
 
     always @(posedge clk) begin
         if (data_ready) begin

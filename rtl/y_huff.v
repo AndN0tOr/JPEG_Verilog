@@ -277,7 +277,7 @@ module y_huff(
     // -------------------------------------------------------------------------
     reg [6:0] count;
     reg [3:0] zrl;
-    reg [11:0] dc_prev;
+    reg signed [11:0] dc_prev;
     reg active;
 
     // Edge detection for enable signal
@@ -291,13 +291,13 @@ module y_huff(
             enable_prev <= enable;
     end
 
-    // FIFO to buffer incoming blocks (depth = 128 for better throughput)
-    reg [11:0] fifo_mem [0:127][0:63]; // 128 blocks, each 64 coefficients
-    reg [6:0] fifo_wr_ptr;
-    reg [6:0] fifo_rd_ptr;
-    wire [6:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
+    // FIFO to buffer incoming blocks (depth = 512 for better throughput)
+    reg [11:0] fifo_mem [0:511][0:63]; // 512 blocks, each 64 coefficients
+    reg [9:0] fifo_wr_ptr;
+    reg [9:0] fifo_rd_ptr;
+    wire [9:0] fifo_count = fifo_wr_ptr - fifo_rd_ptr;
     wire fifo_empty = (fifo_count == 0);
-    wire fifo_full = (fifo_count == 127);
+    wire fifo_full = (fifo_count > 509);
 
     integer j;
 
@@ -308,7 +308,7 @@ module y_huff(
         end
         else if (enable_posedge && !fifo_full) begin
             for (j = 0; j < 64; j = j + 1) begin
-                fifo_mem[fifo_wr_ptr][j] <= zz[j];
+                fifo_mem[fifo_wr_ptr[8:0]][j] <= zz[j];
             end
             fifo_wr_ptr <= fifo_wr_ptr + 1;
         end
@@ -324,18 +324,19 @@ module y_huff(
     reg eob_trigger;
 
     // Read from buffered data instead of direct input
-    wire [11:0] curr_val = zz_buf[count];
-    wire [11:0] diff_val = curr_val - dc_prev;
+    wire signed [11:0] curr_val = $signed(zz_buf[count]);
+    wire signed [11:0] diff_val = curr_val - dc_prev;
 
     reg [5:0] next_last_nz;
     always @(*) begin
         next_last_nz = 0;
         for (i = 1; i < 64; i = i + 1) begin
-            if (fifo_mem[fifo_rd_ptr][i] != 0)
+            if (fifo_mem[fifo_rd_ptr[8:0]][i] != 0)
                 next_last_nz = i;
         end
     end
 
+    // Process blocks from FIFO
     always @(posedge clk) begin
         if (rst) begin
             count <= 0;
@@ -350,7 +351,7 @@ module y_huff(
         else if (!active && !fifo_empty) begin
             // Start processing next block from FIFO
             for (j = 0; j < 64; j = j + 1) begin
-                zz_buf[j] <= fifo_mem[fifo_rd_ptr][j];
+                zz_buf[j] <= fifo_mem[fifo_rd_ptr[8:0]][j];
             end
             fifo_rd_ptr <= fifo_rd_ptr + 1;
 
@@ -382,6 +383,11 @@ module y_huff(
                     // Xuất mã End Of Block (EOB) = AC(0,0)
                     push_data <= Y_AC[3];
                     push_len  <= Y_AC_code_length[3];
+                    push_valid <= 1;
+                end else begin
+                    // Phát dummy chunk để đảm bảo is_last_chunk marker được đẩy vào FIFO
+                    push_data <= 0;
+                    push_len  <= 0;
                     push_valid <= 1;
                 end
                 

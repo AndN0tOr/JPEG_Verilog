@@ -1,0 +1,17 @@
+# EDA Tools & Simulation
+work/
+transcript
+*.wlf
+*.vcd
+*.asdb
+*.jou
+*.log
+*.pb
+*.mif
+
+run -all
+
+# Compiled objects
+*.o
+*.out
+work/_info

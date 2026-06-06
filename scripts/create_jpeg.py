@@ -134,9 +134,9 @@ def compile_jpeg(hex_file, output_jpg, width, height):
     print(f" - File output: {output_jpg}")
 
 if __name__ == "__main__":
-    # BAN CAN THAY DOI CHIEU RONG/CAO CUA ANH DUNG VOI FILE GOC (sample1.bmp)
+    # CHIEU RONG/CAO CUA ANH GOC (sample1.bmp la 640x426)
     IMAGE_WIDTH = 640
-    IMAGE_HEIGHT = 432
+    IMAGE_HEIGHT = 426
 
     # Tao file JPEG voi big-endian
     compile_jpeg("output_bitstream.hex", "output.jpg", IMAGE_WIDTH, IMAGE_HEIGHT)
