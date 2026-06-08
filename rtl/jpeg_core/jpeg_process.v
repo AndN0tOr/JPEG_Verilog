@@ -53,7 +53,7 @@ module jpeg_process(
         .is_last_chunk(cb_is_last_chunk)
     );
 
-    y_dqh y_dqh_inst0(
+    luma_dqh y_dqh_inst0(
         .clk(clk),
         .rst(rst),
         .enable(enable_out),

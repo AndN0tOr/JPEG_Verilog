@@ -62,7 +62,7 @@ wire [11:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88;
 	.Z83_final(Z83_final), .Z84_final(Z84_final), .Z85_final(Z85_final), .Z86_final(Z86_final), 
 	.Z87_final(Z87_final), .Z88_final(Z88_final), .output_enable(dct_enable)); 
 	
-	y_quantizer y_quantizer_inst(
+	luma_quantizer y_quantizer_inst(
 	.clk(clk),.rst(rst),.enable(dct_enable),
 	.Z11(Z11_final), .Z12(Z12_final), .Z13(Z13_final), .Z14(Z14_final), 
 	.Z15(Z15_final), .Z16(Z16_final), .Z17(Z17_final), .Z18(Z18_final), 
@@ -90,7 +90,7 @@ wire [11:0] Q81, Q82, Q83, Q84, Q85, Q86, Q87, Q88;
 	.Q81(Q81), .Q82(Q82), .Q83(Q83), .Q84(Q84), .Q85(Q85), .Q86(Q86), .Q87(Q87), .Q88(Q88),
 	.out_enable(quantizer_enable));
 
-	y_huff u3(.clk(clk), .rst(rst), .enable(quantizer_enable), 
+	luma_huff u3(.clk(clk), .rst(rst), .enable(quantizer_enable), 
 	.Y11(Q11), .Y12(Q12), .Y13(Q13), .Y14(Q14), .Y15(Q15), .Y16(Q16), .Y17(Q17), .Y18(Q18), 
 	.Y21(Q21), .Y22(Q22), .Y23(Q23), .Y24(Q24), .Y25(Q25), .Y26(Q26), .Y27(Q27), .Y28(Q28),
 	.Y31(Q31), .Y32(Q32), .Y33(Q33), .Y34(Q34), .Y35(Q35), .Y36(Q36), .Y37(Q37), .Y38(Q38), 

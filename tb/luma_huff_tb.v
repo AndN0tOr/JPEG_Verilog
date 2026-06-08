@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module y_huff_tb;
+module luma_huff_tb;
     reg clk, rst, enable;
     reg [11:0] Y11, Y12, Y13, Y14, Y15, Y16, Y17, Y18, 
     Y21, Y22, Y23, Y24, Y25, Y26, Y27, Y28,
@@ -23,7 +23,7 @@ module y_huff_tb;
             $display("output_reg_count: %d", output_reg_count);
         end
     endtask
-    y_huff uut(
+    luma_huff uut(
         .clk(clk),
         .rst(rst),
         .enable(enable),

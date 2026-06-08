@@ -18,7 +18,7 @@ module luma_quantizer_tb;
             $display("-------------------------------------------------------------------------\n");
         end
     endtask
-    y_quantizer uut(
+    luma_quantizer uut(
         .clk(clk),
         .rst(rst),
         .enable(enable),
