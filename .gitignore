@@ -1,5 +1,6 @@
 # EDA Tools & Simulation
 work/
+myenv/
 .claude/
 transcript
 *.wlf
