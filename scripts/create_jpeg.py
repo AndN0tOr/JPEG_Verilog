@@ -139,4 +139,4 @@ if __name__ == "__main__":
     IMAGE_HEIGHT = 426
 
     # Tao file JPEG voi big-endian
-    compile_jpeg("output_bitstream.hex", "output.jpg", IMAGE_WIDTH, IMAGE_HEIGHT)
+    compile_jpeg("data/hex/output_bitstream.hex", "data/output/sample1.jpg", IMAGE_WIDTH, IMAGE_HEIGHT)
