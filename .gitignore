@@ -12,6 +12,7 @@ transcript
 *.tcl
 *.log
 *.txt
+*.backup
 
 run -all
 
