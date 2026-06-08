@@ -46,8 +46,8 @@ module jpeg_top_tb();
     end
 
     initial begin
-        file_in  = $fopen("input_rgb.hex", "r");
-        file_out = $fopen("output_bitstream.hex", "w");
+        file_in  = $fopen("data/hex/input_rgb.hex", "r");
+        file_out = $fopen("data/hex/output_bitstream.hex", "w");
         data_count = 0;
 
         if (file_in == 0) begin
