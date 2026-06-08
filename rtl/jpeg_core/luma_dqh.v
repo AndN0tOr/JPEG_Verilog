@@ -1,6 +1,6 @@
 `timescale 1ns / 100ps
 
-module y_dqh(clk, rst, enable, data_in,
+module luma_dqh(clk, rst, enable, data_in,
 JPEG_bitstream, 
   data_ready, y_orc, end_of_block_output,
    end_of_block_empty, is_last_chunk);

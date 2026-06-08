@@ -1,4 +1,4 @@
-module y_quantizer(
+module luma_quantizer(
     input clk, rst, enable,
     // Ngõ vào giữ nguyên giao diện
     input [11:0] Z11, Z12, Z13, Z14, Z15, Z16, Z17, Z18, Z21, Z22, Z23, Z24, Z25, Z26, Z27, Z28,

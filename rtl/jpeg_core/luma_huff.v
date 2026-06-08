@@ -1,4 +1,4 @@
-module y_huff(
+module luma_huff(
     input clk, 
     input rst, 
     input enable,

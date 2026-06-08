@@ -1,4 +1,4 @@
-module y_dqh_tb;
+module luma_dqh_tb;
 reg clk, rst, enable;
 reg [7:0] data_in;
 wire [31:0] JPEG_bitstream;
@@ -7,7 +7,7 @@ wire [4:0] y_orc;
 wire end_of_block_output;
 wire end_of_block_empty;
 
-y_dqh dut (
+luma_dqh dut (
 .clk(clk),
 .rst(rst),
 .enable(enable),
