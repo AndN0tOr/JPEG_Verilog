@@ -1,3 +1,2 @@
-About the project
-	This project is my personal project, implementing JPEG encoder in Verilog.
-	The aim of this project is to get the project to run, pass all the test cases and use it for my course. I have added all the required documents and images to the repository.
+This project is my personal project, implementing JPEG encoder in Verilog.
+The aim of this project is to get the project to run, pass all the test cases and use it for my course. I have added all the required documents and images to the repository.
