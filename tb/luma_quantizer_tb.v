@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module y_quantizer_tb;
+module luma_quantizer_tb;
     reg clk, rst, enable;
     reg [11:0] Z [0:7][0:7];
     wire [11:0] Q [0:7][0:7];
