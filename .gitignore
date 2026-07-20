@@ -1,6 +1,8 @@
 # EDA Tools & Simulation
 work/
 myenv/
+data/hex/
+pre_rtl/
 .claude/
 transcript
 *.wlf
@@ -14,13 +16,18 @@ transcript
 *.log
 *.txt
 *.backup
+*.excalidraw
+*.identifier
+*.id
+
 
 run -all
 
 DEBUG_REPORT.md
 LEVEL_SHIFT_FIX.md
-
+Design_report.md
 # Compiled objects
 *.o
 *.out
 
+transcript
