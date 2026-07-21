@@ -6,8 +6,6 @@ color_trans_sim:
 
 color_trans_tb: color_trans_compile color_trans_sim
 
-dct_2d_lint:
-	verible-verilog-lint dct_2d_tb.sv
 dct_2d_compile:
 	vlog ../rtl/jpeg_core/dct_2d_1channel.v
 	vlog ../rtl/jpeg_core/compute_1d_dct.v
@@ -15,6 +13,13 @@ dct_2d_compile:
 dct_2d_sim:
 	vsim -c -do "run -all; quit" dct_2d_tb
 dct_2d_tb: dct_2d_compile dct_2d_sim
+
+chroma_quant_compile:
+	vlog ../rtl/jpeg_core/chroma_quantizer.v
+	vlog chroma_quant_tb.sv
+chroma_quant_sim:
+	vsim -c -do "run -all; quit" chroma_quant_tb
+chroma_quant_tb: chroma_quant_compile chroma_quant_sim
 
 vmap:
 	vmap -work ../work
