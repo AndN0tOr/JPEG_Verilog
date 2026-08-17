@@ -19,10 +19,10 @@ transcript
 *.excalidraw
 *.identifier
 *.id
-
+*.hex
 
 run -all
-
+modelsim.ini
 DEBUG_REPORT.md
 LEVEL_SHIFT_FIX.md
 Design_report.md
