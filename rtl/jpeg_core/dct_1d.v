@@ -1,4 +1,4 @@
-module compute_1d_dct #(
+module dct_1d #(
     parameter IN_WIDTH = 8 // Hỗ trợ 8-bit cho Hàng, 12-bit cho Cột
 )(
     input rst,
