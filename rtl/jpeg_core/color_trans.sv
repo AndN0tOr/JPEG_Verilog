@@ -15,9 +15,9 @@ module color_trans_sv(
     output data_out_t data_out
 );
 
-  localparam logic [2:0][7:0] COEFF_Y = '{8'd77, 8'd150, 8'd29};
-  localparam logic [2:0][7:0] COEFF_Cb = '{8'd43, 8'd84, 8'd128};
-  localparam logic [2:0][7:0] COEFF_Cr = '{8'd128, 8'd107, 8'd21};
+  localparam logic [7:0] COEFF_Y  [0:2] = '{8'd77, 8'd150, 8'd29};
+  localparam logic [7:0] COEFF_Cb [0:2] = '{8'd43, 8'd84, 8'd128};
+  localparam logic [7:0] COEFF_Cr [0:2] = '{8'd128, 8'd107, 8'd21};
   localparam logic [15:0] offset = 16'd32768;
 
   logic [15:0] Y_prod [0:2];
