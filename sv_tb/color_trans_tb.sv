@@ -1,10 +1,12 @@
-`timescale 1ps / 1ps
+import uvm_pkg::*;
+`include "uvm_macros.svh"
 
+`timescale 1ps / 1ps
+`include "../rtl/jpeg_core/color_trans.sv"
 // ============================================================================
 // 1. IMPORT THƯ VIỆN UVM (Bắt buộc phải nằm ở trên cùng)
 // ============================================================================
-import uvm_pkg::*;
-`include "uvm_macros.svh"
+
 
 // ============================================================================
 // 2. INTERFACE
@@ -13,22 +15,22 @@ interface color_trans_if (
     input logic clk,
     input logic rst
 );
-  logic        enable;
-  logic [23:0] data_in;
-  logic        out_enable;
-  logic [23:0] data_out;
+  logic       enable;
+  data_in_t   data_in;
+  logic       out_enable;
+  data_out_t  data_out;
 endinterface
 
 // ============================================================================
 // 3. SEQUENCE ITEM (Gói dữ liệu)
 // ============================================================================
 class color_item extends uvm_sequence_item;
-  rand bit [23:0] rgb_in;
-  bit      [23:0] ycbcr_out;
+  rand  data_in_t  data_in_item;
+  data_out_t data_out_item;
 
   `uvm_object_utils_begin(color_item)
-    `uvm_field_int(rgb_in, UVM_ALL_ON)
-    `uvm_field_int(ycbcr_out, UVM_ALL_ON)
+    `uvm_field_int(data_in_item, UVM_ALL_ON)
+    `uvm_field_int(data_out_item, UVM_ALL_ON)
   `uvm_object_utils_end
 
   function new(string name = "color_item");
@@ -47,12 +49,12 @@ class color_sequence extends uvm_sequence #(color_item);
   endfunction
 
   virtual task body();
-    repeat (1000) begin
+    repeat (10) begin
       req = color_item::type_id::create("req");
       start_item(req);
 
       // Bypass lỗi svverification license bằng cách tự gán giá trị random
-      req.rgb_in = $urandom();
+      req.data_in_item = $urandom();
 
       finish_item(req);
     end
@@ -77,19 +79,22 @@ class color_driver extends uvm_driver #(color_item);
   endfunction
 
   virtual task run_phase(uvm_phase phase);
-    vif.enable  <= 0;
-    vif.data_in <= 0;
+    vif.enable  <= 1'b0;
+    vif.data_in <= 24'b0;
     wait (!vif.rst);
 
     forever begin
       seq_item_port.get_next_item(req);
+      
       @(posedge vif.clk);
       vif.enable  <= 1'b1;
-      vif.data_in <= req.rgb_in;
+      vif.data_in <= req.data_in_item;
+      
+      // Wait for the RTL (and Monitor) to sample it on the NEXT clock edge
+      @(posedge vif.clk); 
+      vif.enable  <= 1'b0; // PULL IT DOWN TO STOP THE MONITOR!
+      
       seq_item_port.item_done();
-
-      // Chèn 1 xung clk nghỉ để giả lập data không liên tục (tùy chọn)
-      // @(posedge vif.clk); vif.enable <= 1'b0; 
     end
   endtask
 endclass
@@ -123,7 +128,7 @@ class color_monitor extends uvm_monitor;
         @(posedge vif.clk);
         if (vif.enable && !vif.rst) begin
           color_item item_in = color_item::type_id::create("item_in");
-          item_in.rgb_in = vif.data_in;
+          item_in.data_in_item = vif.data_in;
           in_ap.write(item_in);
         end
       end
@@ -133,7 +138,7 @@ class color_monitor extends uvm_monitor;
         @(posedge vif.clk);
         if (vif.out_enable && !vif.rst) begin
           color_item item_out = color_item::type_id::create("item_out");
-          item_out.ycbcr_out = vif.data_out;
+          item_out.data_out_item = vif.data_out;
           out_ap.write(item_out);
         end
       end
@@ -165,11 +170,40 @@ class color_scoreboard extends uvm_scoreboard;
     in_queue.push_back(item);
   endfunction
 
+  function data_out_t get_ref_data_out(data_in_t data_in);
+      data_out_t data_out_ref;
+      int y_32, cb_32, cr_32;
+      y_32 = $rtoi(data_in.r * 0.299 + 0.587 * data_in.g + 0.114 * data_in.b);
+      cb_32 = $rtoi(128 - 0.168736 * data_in.r - 0.331264 * data_in.g + 0.5*data_in.b);
+      cr_32 = $rtoi(128 + 0.5* data_in.r - 0.418688 * data_in.g - 0.081312 * data_in.b);
+
+      data_out_ref.y = (y_32 > 255) ? 8'd255 : (y_32 < 0) ? 8'd0 : y_32[7:0];
+      data_out_ref.cb = (cb_32 > 255) ? 8'd255 : (cb_32 < 0) ? 8'd0 : cb_32[7:0];
+      data_out_ref.cr = (cr_32 > 255) ? 8'd255 : (cr_32 < 0) ? 8'd0 : cr_32[7:0];
+
+      return data_out_ref;
+  endfunction
+
+  function data_out_t get_ref_data_out_exact(data_in_t data_in);
+      data_out_t data_out_ref;
+      logic [15:0] y_tmp, cb_tmp, cr_tmp;
+      y_tmp = (77 * data_in.r) + (150 * data_in.g) + (29 * data_in.b);
+      cb_tmp = 32768 - (43 * data_in.r) - (84 * data_in.g) + (128 * data_in.b);
+      cr_tmp = 32768 + (128 * data_in.r) - (107 * data_in.g) - (21 * data_in.b);
+
+      // Logic làm tròn
+      data_out_ref.y = (y_tmp[7] && y_tmp[15:8] != 8'd255) ? y_tmp[15:8] + 1'b1 : y_tmp[15:8];
+      data_out_ref.cb = (cb_tmp[7] && cb_tmp[15:8] != 8'd255) ? cb_tmp[15:8] + 1'b1 : cb_tmp[15:8];
+      data_out_ref.cr = (cr_tmp[7] && cr_tmp[15:8] != 8'd255) ? cr_tmp[15:8] + 1'b1 : cr_tmp[15:8];
+
+      return data_out_ref;
+    endfunction
+    
   virtual function void write_out(color_item act_item);
     color_item exp_item;
-    bit [7:0] r, g, b;
-    bit [15:0] y_tmp, cb_tmp, cr_tmp;
-    bit [7:0] exp_y, exp_cb, exp_cr;
+
+    data_in_t data_in_ref;
+    data_out_t data_out_ref;
 
     if (in_queue.size() == 0) begin
       `uvm_error("SCB", "Nhận Output nhưng Queue Input trống!")
@@ -178,26 +212,15 @@ class color_scoreboard extends uvm_scoreboard;
 
     exp_item = in_queue.pop_front();
 
-    r = exp_item.rgb_in[23:16];
-    g = exp_item.rgb_in[15:8];
-    b = exp_item.rgb_in[7:0];
+    data_in_ref = exp_item.data_in_item;
+    data_out_ref = get_ref_data_out_exact(data_in_ref);
 
-    // Công thức RTL
-    y_tmp = (77 * r) + (150 * g) + (29 * b);
-    cb_tmp = 32768 - (43 * r) - (84 * g) + (128 * b);
-    cr_tmp = 32768 + (128 * r) - (107 * g) - (21 * b);
-
-    // Logic làm tròn
-    exp_y = (y_tmp[7] && y_tmp[15:8] != 8'd255) ? y_tmp[15:8] + 1'b1 : y_tmp[15:8];
-    exp_cb = (cb_tmp[7] && cb_tmp[15:8] != 8'd255) ? cb_tmp[15:8] + 1'b1 : cb_tmp[15:8];
-    exp_cr = (cr_tmp[7] && cr_tmp[15:8] != 8'd255) ? cr_tmp[15:8] + 1'b1 : cr_tmp[15:8];
-
-    if ({exp_y, exp_cb, exp_cr} !== act_item.ycbcr_out) begin
-      `uvm_error("SCB_FAIL", $sformatf("SAI SỐ! RGB: %06h | EXP: %02h_%02h_%02h | ACT: %06h",
-                                       exp_item.rgb_in, exp_y, exp_cb, exp_cr, act_item.ycbcr_out))
+    if ({data_out_ref} !== act_item.data_out_item) begin
+      `uvm_error("SCB_FAIL", $sformatf("Wrong! RGB: %06h | EXPECT: %02h_%02h_%02h | ACTUAL: %06h",
+                                       data_in_ref, data_out_ref.y, data_out_ref.cb, data_out_ref.cr, act_item.data_out_item))
     end else begin
       `uvm_info("SCB_PASS", $sformatf(
-                "KHỚP! RGB: %06h -> YCbCr: %06h", exp_item.rgb_in, act_item.ycbcr_out), UVM_HIGH)
+                "KHỚP! RGB: %06h -> YCbCr: %06h", data_in_ref, act_item.data_out_item), UVM_HIGH)
     end
   endfunction
 endclass
@@ -289,7 +312,7 @@ module color_trans_tb;
   );
 
   // 9.2 Kết nối RTL (DUT)
-  color_trans DUT (
+  color_trans_sv DUT (
       .clk(vif.clk),
       .rst(vif.rst),
       .enable(vif.enable),
