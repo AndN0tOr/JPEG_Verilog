@@ -20,6 +20,8 @@ transcript
 *.identifier
 *.id
 *.hex
+*.o
+program
 
 run -all
 modelsim.ini
