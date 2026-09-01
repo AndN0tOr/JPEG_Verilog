@@ -22,6 +22,8 @@ transcript
 *.hex
 *.o
 program
+
+# VCS build files
 *.db
 csrc
 *.dat
@@ -30,6 +32,9 @@ covg_defs
 build_db
 covg_defs
 *.tmp
+*.lst
+*.vif
+.LEDA*
 
 run -all
 modelsim.ini
