@@ -22,6 +22,14 @@ transcript
 *.hex
 *.o
 program
+*.db
+csrc
+*.dat
+vcs_rebuild
+covg_defs
+build_db
+covg_defs
+*.tmp
 
 run -all
 modelsim.ini
