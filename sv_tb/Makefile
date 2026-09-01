@@ -1,5 +1,5 @@
 color_trans_compile:
-	vlog ../rtl/jpeg_core/color_trans.v
+	vlog ../rtl/jpeg_core/color_trans.sv
 	vlog ../sv_tb/color_trans_tb.sv
 color_trans_sim:
 	vsim -c -do "run -all; quit" color_trans_tb
