@@ -5,24 +5,23 @@ typedef enum {
 } state_t;
 
 module dct_1d #(
-  parameter IN_WIDTH = 8 // Hỗ trợ 8-bit cho Hàng, 12-bit cho Cột
+  parameter IN_WIDTH = 8 
 )(
   input logic     rst,
   input logic     clk,
   input logic     enable,
   input logic [IN_WIDTH-1:0]  data_in,
   output logic    out_valid,
-  output logic    out_ready,
+  input logic    out_ready,
   output logic signed[11:0]   dct_out   [0:7]
 );
 
   logic signed [15:0] cos_value [0:7];
-  logic signed [26:0] dct_temp_sum [0:7];
+  logic signed [25:0] dct_temp_sum [0:7];
   logic [2:0] index, next_index;
-  logic delay;
   state_t state, next_state;
 
-  // Các hệ số (Đã scale với 2^14 = 16384)
+  
   localparam signed [15:0] cos0  = 5793;  // .3536
   localparam signed [15:0] cos10 = 8035;  // .4904
   localparam signed [15:0] cos11 = 6811;  // .4157
@@ -42,13 +41,15 @@ module dct_1d #(
   assign s_data_in = $signed(data_in);
 
   always_comb begin : next_index_logic
+    next_index = index;
     case(index) 
       3'b000:
       begin 
-        if (enable) begin
+        if (state == IDLE && enable) begin
           next_index = 3'b001;
-        end else begin
-          next_index = 3'b000;
+        end else 
+        if (state == PROCESSING) begin
+          next_index = 3'b001;
         end
       end
       3'b001: next_index = 3'b010;
@@ -63,7 +64,6 @@ module dct_1d #(
           next_index = 3'b000;
         end
       end
-      default: next_index = 3'b000;
     endcase
   end
   always_ff @(posedge clk or posedge rst ) begin : index_fsm
@@ -75,6 +75,7 @@ module dct_1d #(
   end
 
   always_comb begin : next_state_logic
+    next_state = state;
     case(state)
       IDLE: begin
         if (enable) begin
@@ -87,7 +88,6 @@ module dct_1d #(
         end
       end
       VALID: begin
-        out_valid = 1'b1;
         if (out_ready) begin
           next_state = IDLE;
         end
@@ -97,12 +97,12 @@ module dct_1d #(
 
   always_ff @(posedge clk or posedge rst) begin : ctrl_fsm
     if (rst) begin
-      state = IDLE;
+      state <= IDLE;
     end else begin
-      state = next_state;
+      state <= next_state;
     end
   end
-  // Bảng LUT hệ số Cosine (Giữ nguyên logic của bạn)
+  
   always_comb begin : cos_LUT_mapping
     case (index)
     3'b000: begin 
@@ -144,32 +144,35 @@ module dct_1d #(
     end
   endcase
   end
+  assign out_valid = (state == VALID);
 
-  integer i;
-
-  // Toàn bộ logic Tuần tự (Sequential) được gộp vào 1 khối duy nhất
-  always_ff @(posedge clk or posedge rst) begin
-    if (state == IDLE) begin
+  always_ff @(posedge clk or posedge rst) 
+  begin
+    if (rst) begin 
       foreach(dct_temp_sum[i]) begin
-        dct_temp_sum[i] <= 27'b0;
+        dct_temp_sum[i] <= 26'b0;
       end
-    end else 
-    if (state == PROCESSING) begin
-      if (index == 3'b000) begin
-        foreach (dct_temp_sum[i]) begin
-          dct_temp_sum[i] <= s_data_in * cos_value[i]; // Tự động reset bộ đếm khi index = 0
+    end
+    else if (state == IDLE) begin
+      if (enable) begin  // run immediately when enable on
+        foreach(dct_temp_sum[i]) begin
+          dct_temp_sum[i] <= s_data_in * cos_value[i];
         end
       end else begin
+        foreach(dct_temp_sum[i]) begin
+          dct_temp_sum[i] <= 26'b0;
+        end
+      end
+    end else begin
+    if (state == PROCESSING) begin
         foreach (dct_temp_sum[i]) begin
           dct_temp_sum[i] <= dct_temp_sum[i] + (s_data_in * cos_value[i]);
         end
       end
     end
-
-    // 3. Logic Làm tròn và Dịch bit (Shifting & Rounding)
     if (out_valid) begin 
       foreach(dct_out[i]) begin
-        dct_out[i] <= dct_temp_sum[i][13] ? dct_temp_sum[i][26:14] + 1 : dct_temp_sum[i][26:14];
+        dct_out[i] <= dct_temp_sum[i][13] ? dct_temp_sum[i][25:14] + 1 : dct_temp_sum[i][25:14];
       end
     end
   end
